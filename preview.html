@@ -417,13 +417,7 @@
 
       async function initNetwork() {
         try {
-          let graph;
-          try {
-            graph = await loadFirstJson(['paper_citation_network_2019_2024.json', dataBase + 'paper_citation_network_top.json']);
-          } catch {}
-          if (!graph) {
-            graph = await loadFirstJson([dataBase + 'paper_citation_network_top.json']);
-          }
+          const graph = await loadFirstJson(['paper_citation_network_2019_2024.json', dataBase + 'paper_citation_network_top.json']);
           paperNodes = (graph.nodes || []).map((node) => ({
             ...node,
             id: String(node.id),
@@ -1159,8 +1153,7 @@
 
       async function initAuthorNetwork() {
         try {
-          let graph = await loadFirstJson(['uw_madison_5yr_author_collaboration_network_web.json', dataBase + 'author_collaboration_network_top.json']).catch(() => null);
-          if (!graph) graph = await loadJson('author_collaboration_network_top.json');
+          const graph = await loadFirstJson(['uw_madison_5yr_author_collaboration_network_web.json', dataBase + 'author_collaboration_network_top.json']);
           authorNodes = (graph.nodes || []).map((node, index) => ({
             ...node,
             id: String(node.id || `author-${index + 1}`),
