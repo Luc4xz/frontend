@@ -1,3 +1,146 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:53b9d0d57fcd3edf76dcb3560a4709abd260eabf06c83174a9c938b31c3463fa
-size 2444
+{
+  "title": "Patent Citation Distribution of UW-Madison CS Papers",
+  "total_unique_papers": 35891,
+  "histogram": [
+    {
+      "patent_count": 0,
+      "paper_count": 34441
+    },
+    {
+      "patent_count": 1,
+      "paper_count": 736
+    },
+    {
+      "patent_count": 2,
+      "paper_count": 321
+    },
+    {
+      "patent_count": 3,
+      "paper_count": 119
+    },
+    {
+      "patent_count": 4,
+      "paper_count": 86
+    },
+    {
+      "patent_count": 5,
+      "paper_count": 43
+    },
+    {
+      "patent_count": 6,
+      "paper_count": 23
+    },
+    {
+      "patent_count": 7,
+      "paper_count": 20
+    },
+    {
+      "patent_count": 8,
+      "paper_count": 15
+    },
+    {
+      "patent_count": 9,
+      "paper_count": 16
+    },
+    {
+      "patent_count": 10,
+      "paper_count": 8
+    },
+    {
+      "patent_count": 11,
+      "paper_count": 7
+    },
+    {
+      "patent_count": 12,
+      "paper_count": 6
+    },
+    {
+      "patent_count": 13,
+      "paper_count": 10
+    },
+    {
+      "patent_count": 14,
+      "paper_count": 5
+    },
+    {
+      "patent_count": 15,
+      "paper_count": 3
+    },
+    {
+      "patent_count": 16,
+      "paper_count": 2
+    },
+    {
+      "patent_count": 17,
+      "paper_count": 1
+    },
+    {
+      "patent_count": 18,
+      "paper_count": 3
+    },
+    {
+      "patent_count": 19,
+      "paper_count": 3
+    },
+    {
+      "patent_count": 20,
+      "paper_count": 4
+    },
+    {
+      "patent_count": 21,
+      "paper_count": 2
+    },
+    {
+      "patent_count": 23,
+      "paper_count": 1
+    },
+    {
+      "patent_count": 24,
+      "paper_count": 2
+    },
+    {
+      "patent_count": 26,
+      "paper_count": 1
+    },
+    {
+      "patent_count": 29,
+      "paper_count": 1
+    },
+    {
+      "patent_count": 30,
+      "paper_count": 3
+    },
+    {
+      "patent_count": 32,
+      "paper_count": 1
+    },
+    {
+      "patent_count": 35,
+      "paper_count": 1
+    },
+    {
+      "patent_count": 37,
+      "paper_count": 1
+    },
+    {
+      "patent_count": 49,
+      "paper_count": 2
+    },
+    {
+      "patent_count": 62,
+      "paper_count": 1
+    },
+    {
+      "patent_count": 68,
+      "paper_count": 1
+    },
+    {
+      "patent_count": 70,
+      "paper_count": 1
+    },
+    {
+      "patent_count": 92,
+      "paper_count": 1
+    }
+  ]
+}

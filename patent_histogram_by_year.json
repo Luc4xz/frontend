@@ -1,3 +1,560 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:68c50b8bf6dad86c9e28a3f551a47e3a2d13a90f556ee14d562b0229587242c8
-size 9742
+{
+  "metadata": {
+    "title": "Patent Citation Distribution by Year",
+    "description": "For each year, this file stores how many papers have each patent_count value.",
+    "source_file": "uw_madison_cs_papers_unique_10yr.csv",
+    "total_unique_papers": 35891,
+    "year_range": {
+      "start": 2014,
+      "end": 2024
+    }
+  },
+  "patentHistogramByYear": {
+    "2014": [
+      {
+        "patent_count": 0,
+        "paper_count": 2491
+      },
+      {
+        "patent_count": 1,
+        "paper_count": 123
+      },
+      {
+        "patent_count": 2,
+        "paper_count": 60
+      },
+      {
+        "patent_count": 3,
+        "paper_count": 23
+      },
+      {
+        "patent_count": 4,
+        "paper_count": 22
+      },
+      {
+        "patent_count": 5,
+        "paper_count": 11
+      },
+      {
+        "patent_count": 6,
+        "paper_count": 6
+      },
+      {
+        "patent_count": 7,
+        "paper_count": 7
+      },
+      {
+        "patent_count": 8,
+        "paper_count": 1
+      },
+      {
+        "patent_count": 9,
+        "paper_count": 6
+      },
+      {
+        "patent_count": 10,
+        "paper_count": 2
+      },
+      {
+        "patent_count": 11,
+        "paper_count": 1
+      },
+      {
+        "patent_count": 12,
+        "paper_count": 1
+      },
+      {
+        "patent_count": 13,
+        "paper_count": 3
+      },
+      {
+        "patent_count": 14,
+        "paper_count": 1
+      },
+      {
+        "patent_count": 16,
+        "paper_count": 1
+      },
+      {
+        "patent_count": 18,
+        "paper_count": 1
+      },
+      {
+        "patent_count": 19,
+        "paper_count": 1
+      },
+      {
+        "patent_count": 24,
+        "paper_count": 1
+      },
+      {
+        "patent_count": 62,
+        "paper_count": 1
+      },
+      {
+        "patent_count": 68,
+        "paper_count": 1
+      },
+      {
+        "patent_count": 70,
+        "paper_count": 1
+      },
+      {
+        "patent_count": 92,
+        "paper_count": 1
+      }
+    ],
+    "2015": [
+      {
+        "patent_count": 0,
+        "paper_count": 2439
+      },
+      {
+        "patent_count": 1,
+        "paper_count": 112
+      },
+      {
+        "patent_count": 2,
+        "paper_count": 60
+      },
+      {
+        "patent_count": 3,
+        "paper_count": 30
+      },
+      {
+        "patent_count": 4,
+        "paper_count": 17
+      },
+      {
+        "patent_count": 5,
+        "paper_count": 11
+      },
+      {
+        "patent_count": 6,
+        "paper_count": 5
+      },
+      {
+        "patent_count": 7,
+        "paper_count": 6
+      },
+      {
+        "patent_count": 8,
+        "paper_count": 6
+      },
+      {
+        "patent_count": 9,
+        "paper_count": 2
+      },
+      {
+        "patent_count": 10,
+        "paper_count": 1
+      },
+      {
+        "patent_count": 11,
+        "paper_count": 3
+      },
+      {
+        "patent_count": 12,
+        "paper_count": 2
+      },
+      {
+        "patent_count": 13,
+        "paper_count": 4
+      },
+      {
+        "patent_count": 14,
+        "paper_count": 2
+      },
+      {
+        "patent_count": 15,
+        "paper_count": 2
+      },
+      {
+        "patent_count": 16,
+        "paper_count": 1
+      },
+      {
+        "patent_count": 19,
+        "paper_count": 1
+      },
+      {
+        "patent_count": 20,
+        "paper_count": 2
+      },
+      {
+        "patent_count": 24,
+        "paper_count": 1
+      },
+      {
+        "patent_count": 26,
+        "paper_count": 1
+      },
+      {
+        "patent_count": 32,
+        "paper_count": 1
+      },
+      {
+        "patent_count": 35,
+        "paper_count": 1
+      }
+    ],
+    "2016": [
+      {
+        "patent_count": 0,
+        "paper_count": 2483
+      },
+      {
+        "patent_count": 1,
+        "paper_count": 113
+      },
+      {
+        "patent_count": 2,
+        "paper_count": 47
+      },
+      {
+        "patent_count": 3,
+        "paper_count": 20
+      },
+      {
+        "patent_count": 4,
+        "paper_count": 10
+      },
+      {
+        "patent_count": 5,
+        "paper_count": 5
+      },
+      {
+        "patent_count": 6,
+        "paper_count": 1
+      },
+      {
+        "patent_count": 7,
+        "paper_count": 2
+      },
+      {
+        "patent_count": 8,
+        "paper_count": 1
+      },
+      {
+        "patent_count": 9,
+        "paper_count": 3
+      },
+      {
+        "patent_count": 10,
+        "paper_count": 4
+      },
+      {
+        "patent_count": 11,
+        "paper_count": 1
+      },
+      {
+        "patent_count": 12,
+        "paper_count": 2
+      },
+      {
+        "patent_count": 13,
+        "paper_count": 1
+      },
+      {
+        "patent_count": 15,
+        "paper_count": 1
+      },
+      {
+        "patent_count": 17,
+        "paper_count": 1
+      },
+      {
+        "patent_count": 18,
+        "paper_count": 1
+      },
+      {
+        "patent_count": 20,
+        "paper_count": 1
+      },
+      {
+        "patent_count": 23,
+        "paper_count": 1
+      },
+      {
+        "patent_count": 30,
+        "paper_count": 2
+      },
+      {
+        "patent_count": 49,
+        "paper_count": 2
+      }
+    ],
+    "2017": [
+      {
+        "patent_count": 0,
+        "paper_count": 2692
+      },
+      {
+        "patent_count": 1,
+        "paper_count": 101
+      },
+      {
+        "patent_count": 2,
+        "paper_count": 43
+      },
+      {
+        "patent_count": 3,
+        "paper_count": 15
+      },
+      {
+        "patent_count": 4,
+        "paper_count": 18
+      },
+      {
+        "patent_count": 5,
+        "paper_count": 7
+      },
+      {
+        "patent_count": 6,
+        "paper_count": 3
+      },
+      {
+        "patent_count": 7,
+        "paper_count": 3
+      },
+      {
+        "patent_count": 8,
+        "paper_count": 3
+      },
+      {
+        "patent_count": 9,
+        "paper_count": 3
+      },
+      {
+        "patent_count": 11,
+        "paper_count": 1
+      },
+      {
+        "patent_count": 13,
+        "paper_count": 1
+      },
+      {
+        "patent_count": 14,
+        "paper_count": 1
+      },
+      {
+        "patent_count": 21,
+        "paper_count": 2
+      },
+      {
+        "patent_count": 30,
+        "paper_count": 1
+      },
+      {
+        "patent_count": 37,
+        "paper_count": 1
+      }
+    ],
+    "2018": [
+      {
+        "patent_count": 0,
+        "paper_count": 2908
+      },
+      {
+        "patent_count": 1,
+        "paper_count": 91
+      },
+      {
+        "patent_count": 2,
+        "paper_count": 49
+      },
+      {
+        "patent_count": 3,
+        "paper_count": 21
+      },
+      {
+        "patent_count": 4,
+        "paper_count": 7
+      },
+      {
+        "patent_count": 5,
+        "paper_count": 4
+      },
+      {
+        "patent_count": 6,
+        "paper_count": 4
+      },
+      {
+        "patent_count": 7,
+        "paper_count": 1
+      },
+      {
+        "patent_count": 8,
+        "paper_count": 1
+      },
+      {
+        "patent_count": 9,
+        "paper_count": 1
+      },
+      {
+        "patent_count": 10,
+        "paper_count": 1
+      },
+      {
+        "patent_count": 11,
+        "paper_count": 1
+      },
+      {
+        "patent_count": 12,
+        "paper_count": 1
+      },
+      {
+        "patent_count": 13,
+        "paper_count": 1
+      },
+      {
+        "patent_count": 18,
+        "paper_count": 1
+      },
+      {
+        "patent_count": 19,
+        "paper_count": 1
+      },
+      {
+        "patent_count": 20,
+        "paper_count": 1
+      }
+    ],
+    "2019": [
+      {
+        "patent_count": 0,
+        "paper_count": 3497
+      },
+      {
+        "patent_count": 1,
+        "paper_count": 76
+      },
+      {
+        "patent_count": 2,
+        "paper_count": 33
+      },
+      {
+        "patent_count": 3,
+        "paper_count": 6
+      },
+      {
+        "patent_count": 4,
+        "paper_count": 7
+      },
+      {
+        "patent_count": 5,
+        "paper_count": 2
+      },
+      {
+        "patent_count": 6,
+        "paper_count": 3
+      },
+      {
+        "patent_count": 7,
+        "paper_count": 1
+      },
+      {
+        "patent_count": 8,
+        "paper_count": 2
+      },
+      {
+        "patent_count": 9,
+        "paper_count": 1
+      }
+    ],
+    "2020": [
+      {
+        "patent_count": 0,
+        "paper_count": 4128
+      },
+      {
+        "patent_count": 1,
+        "paper_count": 65
+      },
+      {
+        "patent_count": 2,
+        "paper_count": 21
+      },
+      {
+        "patent_count": 3,
+        "paper_count": 1
+      },
+      {
+        "patent_count": 4,
+        "paper_count": 3
+      },
+      {
+        "patent_count": 5,
+        "paper_count": 2
+      },
+      {
+        "patent_count": 6,
+        "paper_count": 1
+      },
+      {
+        "patent_count": 8,
+        "paper_count": 1
+      },
+      {
+        "patent_count": 14,
+        "paper_count": 1
+      },
+      {
+        "patent_count": 29,
+        "paper_count": 1
+      }
+    ],
+    "2021": [
+      {
+        "patent_count": 0,
+        "paper_count": 3747
+      },
+      {
+        "patent_count": 1,
+        "paper_count": 40
+      },
+      {
+        "patent_count": 2,
+        "paper_count": 8
+      },
+      {
+        "patent_count": 3,
+        "paper_count": 3
+      },
+      {
+        "patent_count": 4,
+        "paper_count": 2
+      },
+      {
+        "patent_count": 5,
+        "paper_count": 1
+      }
+    ],
+    "2022": [
+      {
+        "patent_count": 0,
+        "paper_count": 3372
+      },
+      {
+        "patent_count": 1,
+        "paper_count": 14
+      }
+    ],
+    "2023": [
+      {
+        "patent_count": 0,
+        "paper_count": 3701
+      },
+      {
+        "patent_count": 1,
+        "paper_count": 1
+      }
+    ],
+    "2024": [
+      {
+        "patent_count": 0,
+        "paper_count": 2983
+      }
+    ]
+  }
+}

@@ -1,3 +1,20 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:49605e2b2be14db7c900213f226d8e62a0e4b5f9aed4294f7a6d0ebb3df84adc
-size 620
+{
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "latest",
+    "d3": "latest",
+    "vite": "latest",
+    "typescript": "latest",
+    "react": "latest",
+    "react-dom": "latest"
+  },
+  "devDependencies": {
+    "@types/d3": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest"
+  }
+}

@@ -12,7 +12,7 @@
         <div>
           <p class="eyebrow">UW-Madison Computer Science</p>
           <h1>Research Network Dashboard</h1>
-          <p class="subtext">Static preview reads prepared JSON files from the repository root.</p>
+          <p class="subtext">Static preview reads split JSON files from the data/ folder.</p>
         </div>
       </header>
 
@@ -80,6 +80,7 @@
               <button type="button" class="icon-button" id="zoom-in-network" aria-label="Zoom in paper citation network">+</button>
               <button type="button" class="icon-button" id="zoom-out-network" aria-label="Zoom out paper citation network">-</button>
               <button type="button" class="secondary" id="reset-network">Reset View</button>
+              <button type="button" class="secondary" id="load-more-paper-network" hidden>Load More Data</button>
             </div>
             <canvas id="paper-network" class="network-canvas" role="img" aria-label="Paper citation force-directed graph"></canvas>
           </div>
@@ -195,6 +196,7 @@
               <button type="button" class="icon-button" id="zoom-in-author-network" aria-label="Zoom in author collaboration network">+</button>
               <button type="button" class="icon-button" id="zoom-out-author-network" aria-label="Zoom out author collaboration network">-</button>
               <button class="secondary" id="reset-author-network">Reset View</button>
+              <button type="button" class="secondary" id="load-more-author-network" hidden>Load More Data</button>
             </div>
             <canvas id="author-network" class="network-canvas" role="img" aria-label="Author collaboration force-directed graph"></canvas>
           </div>
@@ -245,6 +247,8 @@
       let paperNodes = [];
       let paperLinks = [];
       let paperYearOptions = [];
+      let paperNetworkManifest = null;
+      let paperNetworkLoadedAll = false;
       let authorNetworkZoom = null;
       let authorNetworkTransform = d3.zoomIdentity;
       let authorNetworkDefaultTransform = d3.zoomIdentity;
@@ -252,6 +256,8 @@
       let authorNodes = [];
       let authorLinks = [];
       let authorYearOptions = [];
+      let authorNetworkManifest = null;
+      let authorNetworkLoadedAll = false;
       let authorDetailPinned = false;
       let authorPinnedKey = null;
       let previewTooltipTimer = null;
@@ -292,6 +298,29 @@
           }
         }
         throw new Error(failures.join(' | '));
+      }
+
+      async function loadNetworkFiles(files, statusSelector, label) {
+        const allNodes = new Map();
+        const allLinks = [];
+        for (let index = 0; index < files.length; index += 1) {
+          const file = files[index];
+          try {
+            if (statusSelector) {
+              document.querySelector(statusSelector).textContent = `Loading network data... ${index + 1}/${files.length}: ${file}`;
+            }
+            const data = await loadFirstJson([file]);
+            (data.nodes || []).forEach((node) => allNodes.set(String(node.id), node));
+            (data.links || data.edges || []).forEach((link) => allLinks.push(link));
+          } catch (error) {
+            console.error(`Failed to load ${file}`, error);
+            throw new Error(`${label} file failed: ${file}. ${error.message || error}`);
+          }
+        }
+        return {
+          nodes: Array.from(allNodes.values()),
+          links: allLinks
+        };
       }
 
       function setInfo(panelId, title, lines) {
@@ -417,7 +446,17 @@
 
       async function initNetwork() {
         try {
-          const graph = await loadFirstJson(['paper_citation_network_2019_2024.json']);
+          document.querySelector('#network-state').textContent = 'Loading network data...';
+          paperNetworkManifest = await loadFirstJson(['data/citation_network_manifest.json']).catch(() => null);
+          const graph = await loadFirstJson(['data/citation_network_top500.json']);
+          paperNetworkLoadedAll = false;
+          applyPaperGraph(graph);
+        } catch (error) {
+          document.querySelector('#network-state').textContent = `Paper citation JSON could not be loaded. ${error.message || error}`;
+        }
+      }
+
+      function applyPaperGraph(graph) {
           paperNodes = (graph.nodes || []).map((node) => ({
             ...node,
             id: String(node.id),
@@ -436,16 +475,17 @@
             select.innerHTML = '<option value="all">All years</option>' + paperYearOptions.map((year) => `<option value="${year}">${year}</option>`).join('');
           });
           if (!paperNodes.length) {
-            document.querySelector('#network-state').textContent = 'Prepared paper citation JSON is empty. Add raw data and rerun the preprocessing script.';
+            document.querySelector('#network-state').textContent = 'Prepared paper citation JSON is empty. Split the raw network into data/citation_network_top500.json and part files.';
             return;
           }
           document.querySelector('#paper-count').textContent = paperNodes.length.toLocaleString();
           document.querySelector('#edge-count').textContent = paperLinks.length.toLocaleString();
           document.querySelector('#network-shell').hidden = false;
+          const loadMoreButton = document.querySelector('#load-more-paper-network');
+          loadMoreButton.hidden = !paperNetworkManifest || paperNetworkLoadedAll;
+          loadMoreButton.disabled = false;
+          loadMoreButton.textContent = paperNetworkLoadedAll ? 'All Data Loaded' : 'Load More Data';
           renderPaperNetwork();
-        } catch (error) {
-          document.querySelector('#network-state').textContent = `Paper citation JSON could not be loaded. ${error.message || error}`;
-        }
       }
 
       function renderPaperNetwork() {
@@ -487,6 +527,7 @@
         const visibleIds = new Set(visibleNodes.map((node) => node.id));
         const links = paperLinks.filter((link) => visibleIds.has(String(typeof link.source === 'object' ? link.source.id : link.source || '')) && visibleIds.has(String(typeof link.target === 'object' ? link.target.id : link.target || '')));
         setInfo('#network-state', 'Paper Citation Network Overview', [
+          `Loaded ${paperNodes.length.toLocaleString()} nodes and ${paperLinks.length.toLocaleString()} links.`,
           `${visibleNodes.length.toLocaleString()} papers displayed`,
           `${links.length.toLocaleString()} citation links displayed`,
           'Layout mode: dynamic spring layout.',
@@ -740,15 +781,6 @@
         try {
           let data;
           try {
-            const dashboard = await loadFirstJson(['dashboard_data.json']);
-            if (dashboard && Array.isArray(dashboard.timeline) && dashboard.timeline.length) {
-              data = dashboard.timeline.map((row) => ({
-                year: Number(row.year),
-                count: Number(row.count || row.paper_count || row.paperCount || 0)
-              })).filter((row) => Number.isFinite(row.year) && row.year > 0);
-            }
-          } catch {}
-          try {
             const rootGrowth = await loadFirstJson(['paper_growth_10yr.json']);
             if (!data && Array.isArray(rootGrowth) && rootGrowth.length) {
               data = rootGrowth.map((row) => ({
@@ -823,33 +855,7 @@
             );
             patentRowsAreAggregated = true;
           }
-            const dashboard = await loadFirstJson(['dashboard_data.json']).catch(() => null);
-          const dashboardByYear = dashboard && (dashboard.patentHistogramByYear || dashboard.patentHistogramsByYear);
-          if (!patentRows.length && dashboardByYear) {
-            patentRows = Object.entries(dashboardByYear).flatMap(([year, bins]) =>
-              bins.map((row) => ({
-                year: Number(year),
-                patentCount: Number(row.patent_count || row.patentCount || 0),
-                paperCount: Number(row.paper_count || row.paperCount || 0)
-              }))
-            );
-            patentRowsAreAggregated = true;
-          } else if (!patentRows.length && dashboard && Array.isArray(dashboard.yearlyPatentHistograms)) {
-            patentRows = dashboard.yearlyPatentHistograms.flatMap((entry) =>
-              (entry.histogram || []).map((row) => ({
-                year: Number(entry.year),
-                patentCount: Number(row.patent_count || row.patentCount || 0),
-                paperCount: Number(row.paper_count || row.paperCount || 0)
-              }))
-            );
-            patentRowsAreAggregated = true;
-          } else if (!patentRows.length && dashboard && Array.isArray(dashboard.defaultPatentHistogram)) {
-            patentRows = dashboard.defaultPatentHistogram.map((row) => ({
-              patentCount: Number(row.patent_count || row.patentCount || 0),
-              paperCount: Number(row.paper_count || row.paperCount || 0)
-            }));
-            patentRowsAreAggregated = true;
-          } else if (!patentRows.length) {
+          if (!patentRows.length) {
             const distribution = await loadFirstJson(['patent_count_distribution.json']);
             if (distribution && distribution.by_year) {
               patentRows = Object.entries(distribution.by_year).flatMap(([year, bins]) =>
@@ -1102,6 +1108,29 @@
       document.querySelector('#reset-network').addEventListener('click', () => {
         if (networkZoom) d3.select('#paper-network').transition().duration(350).call(networkZoom.transform, networkDefaultTransform);
       });
+      document.querySelector('#load-more-paper-network').addEventListener('click', async () => {
+        const button = document.querySelector('#load-more-paper-network');
+        if (!paperNetworkManifest || button.disabled) return;
+        button.disabled = true;
+        button.textContent = 'Loading...';
+        try {
+          const files = [
+            ...(paperNetworkManifest.parts || []),
+            ...(paperNetworkManifest.isolated ? [paperNetworkManifest.isolated] : [])
+          ].map((file) => `data/${file}`);
+          const graph = await loadNetworkFiles(files, '#network-state', 'Paper citation network');
+          paperNetworkLoadedAll = true;
+          applyPaperGraph(graph);
+          setInfo('#network-state', 'Paper Citation Network Loaded', [
+            `Loaded ${paperNodes.length.toLocaleString()} nodes and ${paperLinks.length.toLocaleString()} links.`,
+            'Use filters and pan the canvas to explore the larger graph.'
+          ]);
+        } catch (error) {
+          document.querySelector('#network-state').textContent = `Paper citation network could not load more data. ${error.message || error}`;
+          button.disabled = false;
+          button.textContent = 'Load More Data';
+        }
+      });
       document.querySelector('#zoom-in-author-network').addEventListener('click', () => {
         if (authorNetworkZoom) d3.select('#author-network').transition().duration(250).call(authorNetworkZoom.scaleBy, 1.25);
       });
@@ -1110,6 +1139,31 @@
       });
       document.querySelector('#reset-author-network').addEventListener('click', () => {
         if (authorNetworkZoom) d3.select('#author-network').transition().duration(350).call(authorNetworkZoom.transform, authorNetworkDefaultTransform);
+      });
+      document.querySelector('#load-more-author-network').addEventListener('click', async () => {
+        const button = document.querySelector('#load-more-author-network');
+        if (!authorNetworkManifest || button.disabled) return;
+        button.disabled = true;
+        button.textContent = 'Loading...';
+        try {
+          document.querySelector('#author-network-state').hidden = false;
+          const files = [
+            ...(authorNetworkManifest.parts || []),
+            ...(authorNetworkManifest.isolated ? [authorNetworkManifest.isolated] : [])
+          ].map((file) => `data/${file}`);
+          const graph = await loadNetworkFiles(files, '#author-network-state', 'Author collaboration network');
+          authorNetworkLoadedAll = true;
+          applyAuthorGraph(graph);
+          setInfo('#author-overview', 'Author Collaboration Network Loaded', [
+            `Loaded ${authorNodes.length.toLocaleString()} nodes and ${authorLinks.length.toLocaleString()} links.`,
+            'Use filters and pan the canvas to explore the larger graph.'
+          ]);
+        } catch (error) {
+          document.querySelector('#author-network-state').hidden = false;
+          document.querySelector('#author-network-state').textContent = `Author collaboration network could not load more data. ${error.message || error}`;
+          button.disabled = false;
+          button.textContent = 'Load More Data';
+        }
       });
       document.querySelector('#reset-year').addEventListener('click', () => {
         selectedYear = null;
@@ -1152,7 +1206,19 @@
 
       async function initAuthorNetwork() {
         try {
-          const graph = await loadFirstJson(['uw_madison_5yr_author_collaboration_network_web.json']);
+          document.querySelector('#author-network-state').hidden = false;
+          document.querySelector('#author-network-state').textContent = 'Loading network data...';
+          authorNetworkManifest = await loadFirstJson(['data/author_collaboration_network_manifest.json']).catch(() => null);
+          const graph = await loadFirstJson(['data/author_collaboration_network_top1000.json']);
+          authorNetworkLoadedAll = false;
+          applyAuthorGraph(graph);
+        } catch (error) {
+          document.querySelector('#author-network-state').hidden = false;
+          document.querySelector('#author-network-state').textContent = `Author collaboration JSON could not be loaded. ${error.message || error}`;
+        }
+      }
+
+      function applyAuthorGraph(graph) {
           authorNodes = (graph.nodes || []).map((node, index) => ({
             ...node,
             id: String(node.id || `author-${index + 1}`),
@@ -1186,11 +1252,11 @@
           }
           document.querySelector('#author-network-state').hidden = true;
           document.querySelector('#author-network-shell').hidden = false;
+          const loadMoreButton = document.querySelector('#load-more-author-network');
+          loadMoreButton.hidden = !authorNetworkManifest || authorNetworkLoadedAll;
+          loadMoreButton.disabled = false;
+          loadMoreButton.textContent = authorNetworkLoadedAll ? 'All Data Loaded' : 'Load More Data';
           renderAuthorNetwork();
-        } catch (error) {
-          document.querySelector('#author-network-state').hidden = false;
-          document.querySelector('#author-network-state').textContent = `Author collaboration JSON could not be loaded. ${error.message || error}`;
-        }
       }
 
       function renderAuthorNetwork() {
@@ -1244,6 +1310,7 @@
             'Hover a node or edge to inspect details. Click one to pin the card; click the same item again to unpin. Double-click the network to zoom in.'
           ]);
           setInfo('#author-overview', 'Author collaboration overview', [
+            `Loaded ${authorNodes.length.toLocaleString()} nodes and ${authorLinks.length.toLocaleString()} links.`,
             `${nodes.length.toLocaleString()} authors and ${links.length.toLocaleString()} collaboration links`,
             `${d3.sum(nodes, (node) => node.paperCount).toLocaleString()} total author-paper contributions`,
             `Average papers per author: ${(d3.mean(nodes, (node) => node.paperCount) || 0).toFixed(2)}`,
