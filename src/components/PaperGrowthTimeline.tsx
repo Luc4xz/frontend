@@ -87,11 +87,11 @@ export function PaperGrowthTimeline({ data, selectedYear, onSelectYear, loading,
     const chart = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
     const defs = svg.append('defs');
     const lineGradient = defs.append('linearGradient').attr('id', 'paper-growth-line-gradient').attr('x1', '0').attr('x2', '1').attr('y1', '0').attr('y2', '0');
-    lineGradient.append('stop').attr('offset', '0%').attr('stop-color', '#7c3aed');
-    lineGradient.append('stop').attr('offset', '55%').attr('stop-color', '#4f46e5');
+    lineGradient.append('stop').attr('offset', '0%').attr('stop-color', '#38bdf8');
+    lineGradient.append('stop').attr('offset', '55%').attr('stop-color', '#0ea5e9');
     lineGradient.append('stop').attr('offset', '100%').attr('stop-color', '#2563eb');
     const areaGradient = defs.append('linearGradient').attr('id', 'paper-growth-area-gradient').attr('x1', '0').attr('x2', '0').attr('y1', '0').attr('y2', '1');
-    areaGradient.append('stop').attr('offset', '0%').attr('stop-color', '#7c3aed').attr('stop-opacity', 0.24);
+    areaGradient.append('stop').attr('offset', '0%').attr('stop-color', '#0ea5e9').attr('stop-opacity', 0.24);
     areaGradient.append('stop').attr('offset', '100%').attr('stop-color', '#2563eb').attr('stop-opacity', 0.03);
 
     chart.append('g').attr('class', 'chart-grid').call(d3.axisLeft(y).ticks(5).tickSize(-innerWidth).tickFormat(() => ''));
@@ -132,9 +132,9 @@ export function PaperGrowthTimeline({ data, selectedYear, onSelectYear, loading,
       .attr('cy', (d) => y(d.count))
       .attr('r', (d) => d.year === selectedYear ? 7 : 5)
       .attr('fill', '#ffffff')
-      .attr('stroke', (d) => d.year === selectedYear ? '#7c3aed' : '#4f46e5')
+      .attr('stroke', (d) => d.year === selectedYear ? '#0284c7' : '#0ea5e9')
       .attr('stroke-width', (d) => d.year === selectedYear ? 4 : 2.5)
-      .attr('filter', (d) => d.year === selectedYear ? 'drop-shadow(0 0 8px rgba(124, 58, 237, 0.45))' : null)
+      .attr('filter', (d) => d.year === selectedYear ? 'drop-shadow(0 0 8px rgba(14, 165, 233, 0.42))' : null)
       .attr('tabindex', 0)
       .style('cursor', 'pointer')
       .on('click', (_, d) => onSelectYear(d.year))

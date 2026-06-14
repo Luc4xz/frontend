@@ -162,8 +162,21 @@ export function PatentCitationHistogram({ papers, selectedYear, onResetYear, loa
     barGradient.append('stop').attr('offset', '0%').attr('stop-color', '#22d3ee');
     barGradient.append('stop').attr('offset', '100%').attr('stop-color', '#0f766e');
     const upperBarGradient = defs.append('linearGradient').attr('id', 'patent-upper-bar-gradient').attr('x1', '0').attr('x2', '0').attr('y1', '0').attr('y2', '1');
-    upperBarGradient.append('stop').attr('offset', '0%').attr('stop-color', '#38bdf8');
-    upperBarGradient.append('stop').attr('offset', '100%').attr('stop-color', '#0f766e');
+    upperBarGradient.append('stop').attr('offset', '0%').attr('stop-color', '#e0f7ff');
+    upperBarGradient.append('stop').attr('offset', '100%').attr('stop-color', '#67e8f9');
+    const topRoundedBarPath = (xValue: number, yValue: number, widthValue: number, heightValue: number, radiusValue: number) => {
+      const radius = Math.min(radiusValue, widthValue / 2, Math.max(heightValue, 0));
+      const bottom = yValue + Math.max(heightValue, 0);
+      return [
+        `M${xValue},${bottom}`,
+        `L${xValue},${yValue + radius}`,
+        `Q${xValue},${yValue} ${xValue + radius},${yValue}`,
+        `L${xValue + widthValue - radius},${yValue}`,
+        `Q${xValue + widthValue},${yValue} ${xValue + widthValue},${yValue + radius}`,
+        `L${xValue + widthValue},${bottom}`,
+        'Z'
+      ].join(' ');
+    };
 
     if (isAggregatedDistribution) {
       const x = d3.scaleBand().domain(aggregatedCategories.map((bar) => bar.key)).range([0, innerWidth]).padding(0.28);
@@ -232,16 +245,15 @@ export function PatentCitationHistogram({ papers, selectedYear, onResetYear, loa
       }
       chart.append('g').attr('class', 'chart-axis').attr('transform', `translate(0,${innerHeight})`).call(d3.axisBottom(x));
       chart
-        .selectAll('rect.patent-bar')
+        .selectAll('path.patent-bar')
         .data(aggregatedCategories)
-        .join('rect')
+        .join('path')
         .attr('class', 'patent-bar')
-        .attr('x', (d) => x(d.key) ?? 0)
-        .attr('y', (d) => lowerTop + lowerY(Math.min(d.count, lowerMax)))
-        .attr('width', x.bandwidth())
-        .attr('height', (d) => lowerHeight - lowerY(Math.min(d.count, lowerMax)))
-        .attr('rx', Math.min(9, x.bandwidth() / 2))
-        .attr('ry', Math.min(9, x.bandwidth() / 2))
+        .attr('d', (d) => {
+          const barX = x(d.key) ?? 0;
+          const barY = lowerTop + lowerY(Math.min(d.count, lowerMax));
+          return topRoundedBarPath(barX, barY, x.bandwidth(), lowerHeight - lowerY(Math.min(d.count, lowerMax)), 9);
+        })
         .attr('fill', 'url(#patent-bar-gradient)')
         .attr('opacity', 0.96)
         .on('mouseenter', (event: MouseEvent, d) => {
@@ -270,17 +282,13 @@ export function PatentCitationHistogram({ papers, selectedYear, onResetYear, loa
       if (useBrokenAxis) {
         const brokenBars = aggregatedCategories.filter((bar) => bar.count > lowerMax);
         chart
-          .selectAll('rect.upper-bar')
+          .selectAll('path.upper-bar')
           .data(brokenBars)
-          .join('rect')
+          .join('path')
           .attr('class', 'upper-bar')
-          .attr('x', (d) => x(d.key) ?? 0)
-          .attr('y', (d) => topY(d.count))
-          .attr('width', x.bandwidth())
-          .attr('height', (d) => topHeight - topY(d.count))
-          .attr('rx', Math.min(9, x.bandwidth() / 2))
-          .attr('ry', Math.min(9, x.bandwidth() / 2))
+          .attr('d', (d) => topRoundedBarPath(x(d.key) ?? 0, topY(d.count), x.bandwidth(), topHeight - topY(d.count), 9))
           .attr('fill', 'url(#patent-upper-bar-gradient)')
+          .attr('opacity', 0.64)
           .on('mouseenter', (event: MouseEvent, d) => {
             describeAggregatedBar(d.label, d.count);
             const totalPapers = d3.sum(filtered, (paper) => paper.paperCount ?? 0);
@@ -306,8 +314,8 @@ export function PatentCitationHistogram({ papers, selectedYear, onResetYear, loa
           .attr('x2', (_d, index) => x.bandwidth() * 0.43 + index * x.bandwidth() * 0.2)
           .attr('y1', 5)
           .attr('y2', -5)
-          .attr('stroke', '#0f766e')
-          .attr('stroke-width', 3)
+          .attr('stroke', '#67e8f9')
+          .attr('stroke-width', 2)
           .attr('stroke-linecap', 'round');
         chart
           .selectAll('text.upper-value-label')
@@ -330,16 +338,17 @@ export function PatentCitationHistogram({ papers, selectedYear, onResetYear, loa
       chart.append('g').attr('class', 'chart-axis').attr('transform', `translate(0,${innerHeight})`).call(d3.axisBottom(x).ticks(6));
       chart.append('g').attr('class', 'chart-axis').call(d3.axisLeft(y).ticks(5).tickFormat((d) => d3.format('~s')(Number(d))));
       chart
-        .selectAll('rect.patent-bar')
+        .selectAll('path.patent-bar')
         .data(bars)
-        .join('rect')
+        .join('path')
         .attr('class', 'patent-bar')
-        .attr('x', (d) => x(d.x0 ?? 0) + 1)
-        .attr('y', (d) => y(d.count))
-        .attr('width', (d) => Math.max(0, x(d.x1 ?? 0) - x(d.x0 ?? 0) - 2))
-        .attr('height', (d) => innerHeight - y(d.count))
-        .attr('rx', 8)
-        .attr('ry', 8)
+        .attr('d', (d) => topRoundedBarPath(
+          x(d.x0 ?? 0) + 1,
+          y(d.count),
+          Math.max(0, x(d.x1 ?? 0) - x(d.x0 ?? 0) - 2),
+          innerHeight - y(d.count),
+          8
+        ))
         .attr('fill', 'url(#patent-bar-gradient)')
         .on('mouseenter', (event: MouseEvent, d) => {
           describeHistogramBar(d.label, d.count);
