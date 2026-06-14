@@ -12,7 +12,7 @@
         <div>
           <p class="eyebrow">UW-Madison Computer Science</p>
           <h1>Research Network Dashboard</h1>
-          <p class="subtext">Static preview served with Python. It reads only prepared JSON files from public/data/processed/.</p>
+          <p class="subtext">Static preview reads prepared JSON files from the repository root first, then public/data/processed/.</p>
         </div>
       </header>
 
@@ -98,17 +98,19 @@
           <section class="panel-card">
             <div class="panel-header">
               <div>
-                <h2>CS-Related Paper Growth at UW-Madison Over the Past 10 Years.</h2>
+                <h2>CS-Related Paper Growth at WISC Over the Past 10 Years.</h2>
                 <p class="panel-subtitle">Click a year to filter the histogram.</p>
               </div>
             </div>
-            <div id="timeline-state" class="info-panel">
-              <strong>Paper Growth Overview</strong>
-              <span>Year count and paper totals will appear here.</span>
-            </div>
-            <div id="timeline-detail" class="info-panel detail-panel">
-              <strong>Year detail</strong>
-              <span>Hover a bar to inspect year details here.</span>
+            <div class="section-info-stack">
+              <div id="timeline-state" class="info-panel">
+                <strong>Paper Growth Overview</strong>
+                <span>Year count and paper totals will appear here.</span>
+              </div>
+              <div id="timeline-detail" class="info-panel detail-panel">
+                <strong>Year detail</strong>
+                <span>Hover a bar to inspect year details here.</span>
+              </div>
             </div>
             <div id="timeline-shell" class="chart-shell compact-chart" hidden>
               <svg id="paper-timeline" role="img" aria-label="Paper growth timeline"></svg>
@@ -123,13 +125,15 @@
               </div>
               <button class="secondary" id="reset-year">Reset Year Filter</button>
             </div>
-            <div id="histogram-state" class="info-panel">
-              <strong>Patent Citation Distribution Overview</strong>
-              <span>Patent citation bin details will appear here.</span>
-            </div>
-            <div id="histogram-detail" class="info-panel detail-panel">
-              <strong>Patent-count detail</strong>
-              <span>Hover a bar to inspect patent-count details here.</span>
+            <div class="section-info-stack">
+              <div id="histogram-state" class="info-panel">
+                <strong>Patent Citation Distribution Overview</strong>
+                <span>Patent citation bin details will appear here.</span>
+              </div>
+              <div id="histogram-detail" class="info-panel detail-panel">
+                <strong>Patent-count detail</strong>
+                <span>Hover a bar to inspect patent-count details here.</span>
+              </div>
             </div>
             <div id="histogram-shell" class="chart-shell compact-chart" hidden>
               <svg id="patent-histogram" role="img" aria-label="Patent citation distribution histogram"></svg>
@@ -234,6 +238,7 @@
       let patentRowsAreAggregated = false;
       let networkZoom = null;
       let networkTransform = d3.zoomIdentity;
+      let networkDefaultTransform = d3.zoomIdentity;
       let networkSimulation = null;
       let paperDetailPinned = false;
       let paperPinnedId = null;
@@ -264,7 +269,29 @@
       const displayLimitOptions = [250, 500, 1000, 2000, 5000, 'all'];
 
       async function loadJson(name) {
-        return d3.json(dataBase + name);
+        return loadFirstJson([dataBase + name]);
+      }
+
+      async function loadFirstJson(paths) {
+        const failures = [];
+        for (const path of paths) {
+          try {
+            const response = await fetch(path, { cache: 'no-store' });
+            if (!response.ok) {
+              failures.push(`${path}: HTTP ${response.status}`);
+              continue;
+            }
+            const text = await response.text();
+            if (text.startsWith('version https://git-lfs.github.com/spec/v1')) {
+              failures.push(`${path}: Git LFS pointer, not JSON`);
+              continue;
+            }
+            return JSON.parse(text);
+          } catch (error) {
+            failures.push(`${path}: ${error.message || error}`);
+          }
+        }
+        throw new Error(failures.join(' | '));
       }
 
       function setInfo(panelId, title, lines) {
@@ -374,6 +401,12 @@
           .scale(scale);
       }
 
+      function centerCroppedTransform(width, height, scale = 3) {
+        return d3.zoomIdentity
+          .translate(width / 2 - (width / 2) * scale, height / 2 - (height / 2) * scale)
+          .scale(scale);
+      }
+
       function distanceToSegment(px, py, x1, y1, x2, y2) {
         const dx = x2 - x1;
         const dy = y2 - y1;
@@ -386,10 +419,10 @@
         try {
           let graph;
           try {
-            graph = await d3.json('paper_citation_network_2019_2024.json');
+            graph = await loadFirstJson(['paper_citation_network_2019_2024.json', dataBase + 'paper_citation_network_top.json']);
           } catch {}
           if (!graph) {
-            graph = await loadJson('paper_citation_network_top.json');
+            graph = await loadFirstJson([dataBase + 'paper_citation_network_top.json']);
           }
           paperNodes = (graph.nodes || []).map((node) => ({
             ...node,
@@ -416,8 +449,8 @@
           document.querySelector('#edge-count').textContent = paperLinks.length.toLocaleString();
           document.querySelector('#network-shell').hidden = false;
           renderPaperNetwork();
-        } catch {
-          document.querySelector('#network-state').textContent = 'Prepared paper citation JSON not loaded yet. Run python scripts/preprocess_data.py first.';
+        } catch (error) {
+          document.querySelector('#network-state').textContent = `Paper citation JSON could not be loaded. ${error.message || error}`;
         }
       }
 
@@ -462,7 +495,7 @@
         setInfo('#network-state', 'Paper Citation Network Overview', [
           `${visibleNodes.length.toLocaleString()} papers displayed`,
           `${links.length.toLocaleString()} citation links displayed`,
-          'Layout mode: precomputed static layout.',
+          'Layout mode: dynamic spring layout.',
           'Hover a node or edge to inspect details. Click a node to keep its details fixed; click the same node again to unpin. Double-click the network to zoom in.'
         ]);
         drawNetwork(visibleNodes, links);
@@ -519,7 +552,10 @@
           })
           .filter(Boolean);
         const useStaticPaperLayout = forceStaticLayout || nodes.length > 2000;
-        canvas.dataset.layoutMode = 'static';
+        canvas.dataset.layoutMode = useStaticPaperLayout ? 'static' : 'dynamic';
+        networkDefaultTransform = centerCroppedTransform(width, height, 1);
+        networkTransform = networkDefaultTransform;
+        d3.select(canvas).call(networkZoom.transform, networkDefaultTransform);
 
         function draw() {
           const transform = networkTransform;
@@ -594,10 +630,18 @@
             .force('x', d3.forceX((node) => node.anchorX).strength(0.025))
             .force('y', d3.forceY((node) => node.anchorY).strength(0.025))
             .force('collision', d3.forceCollide((d) => d.radius + 2.1).strength(0.48))
-            .stop();
-        networkSimulation.tick(useStaticPaperLayout ? 220 : 120);
-        networkSimulation = null;
-        draw();
+            .alpha(1)
+            .alphaDecay(useStaticPaperLayout ? 0.055 : 0.045)
+            .velocityDecay(0.52)
+            .on('tick', draw)
+            .on('end', draw);
+        if (useStaticPaperLayout) {
+          window.setTimeout(() => {
+            networkSimulation?.stop();
+            networkSimulation = null;
+            draw();
+          }, 3200);
+        }
 
         d3.select(canvas).call(d3.drag()
           .filter((event) => !event.button)
@@ -617,8 +661,10 @@
               canvas.style.cursor = 'grabbing';
               return;
             }
+            if (networkSimulation && !event.active) networkSimulation.alphaTarget(0.18).restart();
             event.subject.fx = event.subject.x;
             event.subject.fy = event.subject.y;
+            canvas.style.cursor = 'grabbing';
           })
           .on('drag', (event) => {
             if (!event.subject) return;
@@ -644,8 +690,10 @@
               canvas.style.cursor = 'grab';
               return;
             }
+            if (networkSimulation && !event.active) networkSimulation.alphaTarget(0);
             event.subject.fx = null;
             event.subject.fy = null;
+            canvas.style.cursor = 'grab';
           }));
 
         canvas.onpointermove = (event) => {
@@ -698,7 +746,7 @@
         try {
           let data;
           try {
-            const dashboard = await d3.json('dashboard_data.json');
+            const dashboard = await loadFirstJson(['dashboard_data.json']);
             if (dashboard && Array.isArray(dashboard.timeline) && dashboard.timeline.length) {
               data = dashboard.timeline.map((row) => ({
                 year: Number(row.year),
@@ -707,7 +755,7 @@
             }
           } catch {}
           try {
-            const rootGrowth = await d3.json('paper_growth_10yr.json');
+            const rootGrowth = await loadFirstJson(['paper_growth_10yr.json']);
             if (!data && Array.isArray(rootGrowth) && rootGrowth.length) {
               data = rootGrowth.map((row) => ({
                 year: Number(row.year),
@@ -731,8 +779,8 @@
             'Hover a bar to inspect a year. Click a bar to update the patent citation histogram.'
           ]);
           drawTimeline(data);
-        } catch {
-          document.querySelector('#timeline-state').textContent = 'Prepared paper growth JSON not loaded yet. Run python scripts/preprocess_data.py first.';
+        } catch (error) {
+          document.querySelector('#timeline-state').textContent = `Paper growth JSON could not be loaded. ${error.message || error}`;
         }
       }
 
@@ -748,6 +796,8 @@
         const y = d3.scaleLinear().domain([0, d3.max(data, (d) => d.count) || 1]).nice().range([innerHeight, 0]);
         chart.append('g').attr('transform', `translate(0,${innerHeight})`).call(d3.axisBottom(x));
         chart.append('g').call(d3.axisLeft(y).ticks(5));
+        chart.append('text').attr('x', innerWidth / 2).attr('y', innerHeight + 46).attr('text-anchor', 'middle').attr('class', 'axis-label').text('Year');
+        chart.append('text').attr('transform', 'rotate(-90)').attr('x', -innerHeight / 2).attr('y', -46).attr('text-anchor', 'middle').attr('class', 'axis-label').text('Number of papers');
         chart.selectAll('rect').data(data).join('rect')
           .attr('x', (d) => x(d.year))
           .attr('y', (d) => y(d.count))
@@ -768,7 +818,7 @@
 
       async function initHistogram() {
         try {
-          const yearlyDistribution = await d3.json('patent_histogram_by_year.json').catch(() => null);
+          const yearlyDistribution = await loadFirstJson(['patent_histogram_by_year.json']).catch(() => null);
           if (yearlyDistribution && yearlyDistribution.patentHistogramByYear) {
             patentRows = Object.entries(yearlyDistribution.patentHistogramByYear).flatMap(([year, bins]) =>
               bins.map((row) => ({
@@ -779,7 +829,7 @@
             );
             patentRowsAreAggregated = true;
           }
-          const dashboard = await d3.json('dashboard_data.json').catch(() => null);
+            const dashboard = await loadFirstJson(['dashboard_data.json']).catch(() => null);
           const dashboardByYear = dashboard && (dashboard.patentHistogramByYear || dashboard.patentHistogramsByYear);
           if (!patentRows.length && dashboardByYear) {
             patentRows = Object.entries(dashboardByYear).flatMap(([year, bins]) =>
@@ -806,7 +856,7 @@
             }));
             patentRowsAreAggregated = true;
           } else if (!patentRows.length) {
-            const distribution = await d3.json('patent_count_distribution.json');
+            const distribution = await loadFirstJson(['patent_count_distribution.json']);
             if (distribution && distribution.by_year) {
               patentRows = Object.entries(distribution.by_year).flatMap(([year, bins]) =>
                 bins.map((row) => ({
@@ -844,8 +894,8 @@
           document.querySelector('#histogram-shell').hidden = false;
           setInfo('#histogram-state', 'Patent Citation Distribution Overview', ['Showing all years. Hover a bar to inspect a patent-count bin.']);
           drawHistogram();
-        } catch {
-          document.querySelector('#histogram-state').textContent = 'Patent citation distribution JSON not loaded yet. Put patent_count_distribution.json in the project folder or run python scripts/preprocess_data.py first.';
+        } catch (error) {
+          document.querySelector('#histogram-state').textContent = `Patent citation distribution JSON could not be loaded. ${error.message || error}`;
         }
       }
 
@@ -1057,7 +1107,7 @@
         if (networkZoom) d3.select('#paper-network').transition().duration(250).call(networkZoom.scaleBy, 0.8);
       });
       document.querySelector('#reset-network').addEventListener('click', () => {
-        if (networkZoom) d3.select('#paper-network').transition().duration(350).call(networkZoom.transform, d3.zoomIdentity);
+        if (networkZoom) d3.select('#paper-network').transition().duration(350).call(networkZoom.transform, networkDefaultTransform);
       });
       document.querySelector('#zoom-in-author-network').addEventListener('click', () => {
         if (authorNetworkZoom) d3.select('#author-network').transition().duration(250).call(authorNetworkZoom.scaleBy, 1.25);
@@ -1109,7 +1159,7 @@
 
       async function initAuthorNetwork() {
         try {
-          let graph = await d3.json('uw_madison_5yr_author_collaboration_network_web.json').catch(() => null);
+          let graph = await loadFirstJson(['uw_madison_5yr_author_collaboration_network_web.json', dataBase + 'author_collaboration_network_top.json']).catch(() => null);
           if (!graph) graph = await loadJson('author_collaboration_network_top.json');
           authorNodes = (graph.nodes || []).map((node, index) => ({
             ...node,
@@ -1145,9 +1195,9 @@
           document.querySelector('#author-network-state').hidden = true;
           document.querySelector('#author-network-shell').hidden = false;
           renderAuthorNetwork();
-        } catch {
+        } catch (error) {
           document.querySelector('#author-network-state').hidden = false;
-          document.querySelector('#author-network-state').textContent = 'Author collaboration data not loaded yet.';
+          document.querySelector('#author-network-state').textContent = `Author collaboration JSON could not be loaded. ${error.message || error}`;
         }
       }
 
@@ -1228,6 +1278,7 @@
         if (authorNetworkSimulation) authorNetworkSimulation.stop();
 
         const color = d3.scaleOrdinal(d3.schemeTableau10);
+        const useStaticFullGraphLayout = forceStaticLayout || nodes.length >= staticAuthorLayoutNodeThreshold;
         const radius = d3.scaleSqrt().domain([0, d3.max(nodes, (d) => d.paperCount) || 1]).range([2.2, 11]);
         const centerX = width / 2;
         const centerY = height / 2;
@@ -1240,7 +1291,6 @@
           node.color = color(group);
         });
         const nodeById = new Map(nodes.map((node) => [node.id, node]));
-        const useStaticFullGraphLayout = forceStaticLayout || nodes.length >= staticAuthorLayoutNodeThreshold;
         const linksForCanvas = useStaticFullGraphLayout && links.length > staticAuthorRenderLinkLimit
           ? [...links].sort((a, b) => Number(b.weight || b.shared_paper_count || 1) - Number(a.weight || a.shared_paper_count || 1)).slice(0, staticAuthorRenderLinkLimit)
           : links;
@@ -1252,40 +1302,22 @@
         canvas.dataset.layoutMode = useStaticFullGraphLayout ? 'static' : 'dynamic';
         let universeBounds = { minX: 0, minY: 0, maxX: width, maxY: height };
         if (useStaticFullGraphLayout) {
-          const groupCounts = d3.rollup(nodes, (groupNodes) => groupNodes.length, (node) => String(node.cluster || node.institution || 'author'));
-          const groups = Array.from(groupCounts, ([key, count]) => ({ key, count })).sort((a, b) => b.count - a.count || a.key.localeCompare(b.key));
-          const worldRadius = Math.max(5200, Math.sqrt(nodes.length) * 34);
-          const worldCenterX = width / 2;
-          const worldCenterY = height / 2;
-          const clusterCenter = new Map();
-          groups.forEach((group, index) => {
-            const hash = stableHash(group.key);
-            const angle = (index / Math.max(groups.length, 1)) * Math.PI * 2 + (hash % 360) * Math.PI / 180;
-            const orbit = worldRadius * (0.18 + 0.72 * Math.sqrt((index + 1) / Math.max(groups.length, 1)));
-            clusterCenter.set(group.key, {
-              x: worldCenterX + Math.cos(angle) * orbit,
-              y: worldCenterY + Math.sin(angle) * orbit * 0.72,
-              radius: Math.max(140, Math.sqrt(group.count) * 24)
-            });
-          });
-          const localIndexByGroup = new Map();
-          nodes.forEach((node) => {
-            const key = String(node.cluster || node.institution || 'author');
-            const center = clusterCenter.get(key) || { x: worldCenterX, y: worldCenterY, radius: worldRadius * 0.25 };
-            const localIndex = localIndexByGroup.get(key) || 0;
-            localIndexByGroup.set(key, localIndex + 1);
-            const hash = stableHash(`${node.id}-${localIndex}`);
-            const angle = ((hash % 10000) / 10000) * Math.PI * 2;
-            const spread = Math.sqrt((localIndex + 1) / Math.max(groupCounts.get(key) || 1, 1)) * center.radius;
-            const jitter = 0.78 + ((hash % 200) / 1000);
-            node.x = center.x + Math.cos(angle) * spread * jitter;
-            node.y = center.y + Math.sin(angle) * spread * jitter;
+          const worldRadius = Math.min(width, height) * 1.18;
+          const goldenAngle = Math.PI * (3 - Math.sqrt(5));
+          nodes.forEach((node, index) => {
+            const hash = stableHash(`${node.id}-${index}`);
+            const radiusRatio = Math.sqrt((index + 0.5) / Math.max(nodes.length, 1));
+            const angle = index * goldenAngle + ((hash % 1000) / 1000) * 0.42;
+            const jitter = ((((hash >>> 10) % 1000) / 1000) - 0.5) * worldRadius * 0.026;
+            const nodeRadius = radiusRatio * worldRadius + jitter;
+            node.x = width / 2 + Math.cos(angle) * nodeRadius;
+            node.y = height / 2 + Math.sin(angle) * nodeRadius;
           });
           universeBounds = {
-            minX: worldCenterX - worldRadius * 1.1,
-            minY: worldCenterY - worldRadius * 0.9,
-            maxX: worldCenterX + worldRadius * 1.1,
-            maxY: worldCenterY + worldRadius * 0.9
+            minX: width / 2 - worldRadius,
+            minY: height / 2 - worldRadius,
+            maxX: width / 2 + worldRadius,
+            maxY: height / 2 + worldRadius
           };
         }
         const importantNodes = new Set([...nodes].sort((a, b) => b.paperCount - a.paperCount).slice(0, 14).map((node) => node.id));
@@ -1386,9 +1418,9 @@
           });
         d3.select(canvas).call(authorNetworkZoom);
         if (useStaticFullGraphLayout) {
-          authorNetworkDefaultTransform = fitTransformForNodes(nodes, width, height, 42);
+          authorNetworkDefaultTransform = centerCroppedTransform(width, height, 2);
         } else {
-          authorNetworkDefaultTransform = d3.zoomIdentity;
+          authorNetworkDefaultTransform = centerCroppedTransform(width, height, 2);
         }
         authorNetworkTransform = authorNetworkDefaultTransform;
         d3.select(canvas).call(authorNetworkZoom.transform, authorNetworkDefaultTransform);

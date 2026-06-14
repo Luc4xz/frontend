@@ -96,6 +96,12 @@ function fitTransformForNodes(nodes: CanvasNode[], width: number, height: number
     .scale(scale);
 }
 
+function centerCroppedTransform(width: number, height: number, scale = 3) {
+  return d3.zoomIdentity
+    .translate(width / 2 - (width / 2) * scale, height / 2 - (height / 2) * scale)
+    .scale(scale);
+}
+
 function isPanSubject(subject: CanvasNode | PanSubject): subject is PanSubject {
   return 'isPanSubject' in subject;
 }
@@ -289,35 +295,21 @@ export function AuthorCollaborationNetwork({ nodes, links, loading, missing, err
       .filter((link): link is CanvasLink => Boolean(link));
 
     if (staticMode) {
-      const groupCounts = d3.rollup(canvasNodes, (groupNodes) => groupNodes.length, (node) => groupKey(node));
-      const groups = Array.from(groupCounts, ([key, count]) => ({ key, count })).sort((a, b) => b.count - a.count || a.key.localeCompare(b.key));
-      const worldRadius = Math.max(5200, Math.sqrt(canvasNodes.length) * 34);
-      const clusterCenter = new Map<string, { x: number; y: number; radius: number }>();
-      groups.forEach((group, index) => {
-        const angle = (index / Math.max(groups.length, 1)) * Math.PI * 2 + seededUnit(group.key, 'cluster') * Math.PI * 2;
-        const orbit = worldRadius * (0.18 + 0.72 * Math.sqrt((index + 1) / Math.max(groups.length, 1)));
-        clusterCenter.set(group.key, {
-          x: width / 2 + Math.cos(angle) * orbit,
-          y: height / 2 + Math.sin(angle) * orbit * 0.72,
-          radius: Math.max(140, Math.sqrt(group.count) * 24)
-        });
-      });
-      const localIndexByGroup = new Map<string, number>();
-      canvasNodes.forEach((node) => {
-        const key = groupKey(node);
-        const center = clusterCenter.get(key) ?? { x: width / 2, y: height / 2, radius: worldRadius * 0.25 };
-        const localIndex = localIndexByGroup.get(key) ?? 0;
-        localIndexByGroup.set(key, localIndex + 1);
-        const angle = seededUnit(`${node.id}-${localIndex}`, 'local') * Math.PI * 2;
-        const spread = Math.sqrt((localIndex + 1) / Math.max(groupCounts.get(key) ?? 1, 1)) * center.radius;
-        const jitter = 0.78 + seededUnit(node.id, 'jitter') * 0.2;
-        node.x = center.x + Math.cos(angle) * spread * jitter;
-        node.y = center.y + Math.sin(angle) * spread * jitter;
+      const worldRadius = Math.min(width, height) * 1.18;
+      const goldenAngle = Math.PI * (3 - Math.sqrt(5));
+      canvasNodes.forEach((node, index) => {
+        const hash = stableHash(`${node.id}-${index}`);
+        const radiusRatio = Math.sqrt((index + 0.5) / Math.max(canvasNodes.length, 1));
+        const angle = index * goldenAngle + ((hash % 1000) / 1000) * 0.42;
+        const jitter = ((((hash >>> 10) % 1000) / 1000) - 0.5) * worldRadius * 0.026;
+        const nodeRadius = radiusRatio * worldRadius + jitter;
+        node.x = width / 2 + Math.cos(angle) * nodeRadius;
+        node.y = height / 2 + Math.sin(angle) * nodeRadius;
       });
     }
 
     graphRef.current = { nodes: canvasNodes, links: canvasLinks, staticMode };
-    defaultTransformRef.current = staticMode ? fitTransformForNodes(canvasNodes, width, height, 42) : d3.zoomIdentity;
+    defaultTransformRef.current = centerCroppedTransform(width, height, 2);
     transformRef.current = defaultTransformRef.current;
 
     function draw() {
@@ -354,7 +346,7 @@ export function AuthorCollaborationNetwork({ nodes, links, loading, missing, err
 
     const zoom = d3.zoom<HTMLCanvasElement, unknown>()
       .scaleExtent([0.15, 10])
-      .filter((event) => event.type === 'wheel' || event.type === 'dblclick')
+      .filter((event) => event.type === 'dblclick')
       .on('zoom', (event) => {
         transformRef.current = event.transform;
         draw();

@@ -1,7 +1,7 @@
 import * as d3 from 'd3';
 import type { AuthorLink, AuthorNode, GraphLink, PaperMetadata, PaperNode, YearCount } from '../types/data';
 
-const processedPath = (fileName: string) => `/data/processed/${fileName}`;
+const processedPath = (fileName: string) => `data/processed/${fileName}`;
 
 async function loadJson<T>(fileName: string): Promise<T> {
   const payload = await d3.json(processedPath(fileName));
@@ -15,7 +15,7 @@ export async function loadPaperCitationGraph(): Promise<{ nodes: PaperNode[]; li
       nodes?: Array<Record<string, string | number | null | undefined>>;
       links?: Array<Record<string, string | number | null | undefined>>;
       edges?: Array<Record<string, string | number | null | undefined>>;
-    }>('/paper_citation_network_2019_2024.json');
+    }>('paper_citation_network_2019_2024.json');
     if (graph?.nodes?.length) {
       const nodes = graph.nodes.map((node, index) => {
         const id = String(node.id ?? `paper-${index + 1}`);
@@ -64,7 +64,7 @@ export async function loadAuthorCollaborationGraph(): Promise<{ nodes: AuthorNod
       nodes?: Array<Record<string, string | number | string[] | number[] | null | undefined>>;
       links?: Array<Record<string, string | number | string[] | number[] | null | undefined>>;
       edges?: Array<Record<string, string | number | string[] | number[] | null | undefined>>;
-    }>('/uw_madison_5yr_author_collaboration_network_web.json');
+    }>('uw_madison_5yr_author_collaboration_network_web.json');
     if (graph?.nodes?.length) {
       const nodes = graph.nodes.map((node, index) => {
         const id = String(node.id ?? `author-${index + 1}`);
@@ -103,7 +103,7 @@ export async function loadPaperGrowth(): Promise<YearCount[]> {
   try {
     const dashboard = await d3.json<{
       timeline?: Array<{ year?: number; count?: number; paper_count?: number; paperCount?: number }>;
-    }>('/dashboard_data.json');
+    }>('dashboard_data.json');
     if (dashboard?.timeline?.length) {
       return dashboard.timeline
         .map((row) => ({
@@ -119,7 +119,7 @@ export async function loadPaperGrowth(): Promise<YearCount[]> {
   }
 
   try {
-    const growth = await d3.json<Array<{ year?: number; count?: number; paper_count?: number; paperCount?: number }>>('/paper_growth_10yr.json');
+    const growth = await d3.json<Array<{ year?: number; count?: number; paper_count?: number; paperCount?: number }>>('paper_growth_10yr.json');
     if (growth?.length) {
       return growth
         .map((row) => ({
@@ -141,7 +141,7 @@ export async function loadPaperMetadata(): Promise<PaperMetadata[]> {
   try {
     const yearlyDistribution = await d3.json<{
       patentHistogramByYear?: Record<string, Array<{ patent_count?: number; patentCount?: number; paper_count?: number; paperCount?: number }>>;
-    }>('/patent_histogram_by_year.json');
+    }>('patent_histogram_by_year.json');
     if (yearlyDistribution?.patentHistogramByYear) {
       return Object.entries(yearlyDistribution.patentHistogramByYear).flatMap(([year, bins]) =>
         bins.map((bin) => ({
@@ -162,7 +162,7 @@ export async function loadPaperMetadata(): Promise<PaperMetadata[]> {
       patentHistogramByYear?: Record<string, Array<{ patent_count?: number; patentCount?: number; paper_count?: number; paperCount?: number }>>;
       patentHistogramsByYear?: Record<string, Array<{ patent_count?: number; patentCount?: number; paper_count?: number; paperCount?: number }>>;
       yearlyPatentHistograms?: Array<{ year?: number; histogram?: Array<{ patent_count?: number; patentCount?: number; paper_count?: number; paperCount?: number }> }>;
-    }>('/dashboard_data.json');
+    }>('dashboard_data.json');
     const byYear = dashboard?.patentHistogramByYear ?? dashboard?.patentHistogramsByYear;
     if (byYear) {
       return Object.entries(byYear).flatMap(([year, bins]) =>
@@ -200,7 +200,7 @@ export async function loadPaperMetadata(): Promise<PaperMetadata[]> {
       histogram?: Array<{ patent_count?: number; patentCount?: number; paper_count?: number; paperCount?: number }>;
       by_year?: Record<string, Array<{ patent_count?: number; patentCount?: number; paper_count?: number; paperCount?: number }>>;
       years?: Array<{ year?: number; histogram?: Array<{ patent_count?: number; patentCount?: number; paper_count?: number; paperCount?: number }> }>;
-    }>('/patent_count_distribution.json');
+    }>('patent_count_distribution.json');
     if (distribution?.by_year) {
       return Object.entries(distribution.by_year).flatMap(([year, bins]) =>
         bins.map((bin) => ({

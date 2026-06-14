@@ -130,7 +130,7 @@ export function PaperGrowthTimeline({ data, selectedYear, onSelectYear, loading,
     <section className="panel-card">
       <div className="panel-header">
         <div>
-          <h2>CS-Related Paper Growth at UW-Madison Over the Past 10 Years.</h2>
+          <h2>CS-Related Paper Growth at WISC Over the Past 10 Years.</h2>
           <p className="panel-subtitle">Click a year to coordinate the patent citation histogram.</p>
         </div>
       </div>

@@ -17,6 +17,8 @@ type CanvasNode = PaperNode & {
   connectedCount: number;
   x: number;
   y: number;
+  anchorX?: number;
+  anchorY?: number;
   fx?: number | null;
   fy?: number | null;
 };
@@ -69,17 +71,36 @@ function seededUnit(value: string, salt = '') {
 }
 
 function seededScatterPosition(id: string, index: number, width: number, height: number, spread = 1, group = 'network') {
-  const angle = seededUnit(id, 'angle') * Math.PI * 2;
-  const radius = Math.sqrt(seededUnit(id, 'radius')) * Math.min(width, height) * 0.46 * spread;
-  const wobbleX = (seededUnit(id, 'wobble-x') - 0.5) * Math.min(width, height) * 0.18 * spread;
-  const wobbleY = (seededUnit(id, 'wobble-y') - 0.5) * Math.min(width, height) * 0.18 * spread;
-  const groupAngle = seededUnit(group, 'group-angle') * Math.PI * 2;
-  const groupRadius = Math.sqrt(seededUnit(group, 'group-radius')) * Math.min(width, height) * 0.16 * spread;
-  const rowOffset = ((index % 9) - 4) * 1.7;
+  const groupX = 0.18 + seededUnit(group, 'group-x') * 0.64;
+  const groupY = 0.18 + seededUnit(group, 'group-y') * 0.64;
+  const xNoise = (seededUnit(id, 'x') - 0.5) * 0.92 * spread;
+  const yNoise = (seededUnit(id, 'y') - 0.5) * 0.92 * spread;
+  const skew = (seededUnit(`${id}-${index}`, 'skew') - 0.5) * 0.16 * spread;
+  const wave = Math.sin((index * 0.73 + seededUnit(group, 'wave') * 6.28)) * 0.045 * spread;
   return {
-    x: width / 2 + Math.cos(groupAngle) * groupRadius + Math.cos(angle) * radius + wobbleX + rowOffset,
-    y: height / 2 + Math.sin(groupAngle) * groupRadius * 0.74 + Math.sin(angle) * radius * 0.74 + wobbleY - rowOffset
+    x: width * Math.max(0.04, Math.min(0.96, groupX + xNoise * 0.52 + skew)),
+    y: height * Math.max(0.06, Math.min(0.94, groupY + yNoise * 0.48 + wave - skew * 0.35))
   };
+}
+
+function fitTransformForNodes(nodes: CanvasNode[], width: number, height: number, padding = 42) {
+  if (!nodes.length) return d3.zoomIdentity;
+  const minX = d3.min(nodes, (node) => node.x - node.radius) ?? 0;
+  const maxX = d3.max(nodes, (node) => node.x + node.radius) ?? width;
+  const minY = d3.min(nodes, (node) => node.y - node.radius) ?? 0;
+  const maxY = d3.max(nodes, (node) => node.y + node.radius) ?? height;
+  const graphWidth = Math.max(1, maxX - minX);
+  const graphHeight = Math.max(1, maxY - minY);
+  const scale = Math.min((width - padding * 2) / graphWidth, (height - padding * 2) / graphHeight, 1.25);
+  return d3.zoomIdentity
+    .translate(width / 2 - ((minX + maxX) / 2) * scale, height / 2 - ((minY + maxY) / 2) * scale)
+    .scale(scale);
+}
+
+function centerCroppedTransform(width: number, height: number, scale = 3) {
+  return d3.zoomIdentity
+    .translate(width / 2 - (width / 2) * scale, height / 2 - (height / 2) * scale)
+    .scale(scale);
 }
 
 function isPanSubject(subject: CanvasNode | PanSubject): subject is PanSubject {
@@ -200,7 +221,7 @@ export function PaperCitationNetwork({ nodes, links, loading, error }: PaperCita
         `Year range: ${yearRange}`,
         `Average paper citations: ${averageCitations.toFixed(2)}`,
         `Average patent citations: ${averagePatents.toFixed(2)}`,
-        staticMode ? 'Layout mode: force layout rendered first, then frozen for scale.' : 'Layout mode: dynamic force layout.'
+        'Layout mode: dynamic spring layout.'
       ]
     };
   }, [filtered, staticMode, years]);
@@ -251,7 +272,9 @@ export function PaperCitationNetwork({ nodes, links, loading, error }: PaperCita
         radius: radius(Math.max(node.citationCount, degree)),
         connectedCount: degree,
         x: position.x,
-        y: position.y
+        y: position.y,
+        anchorX: position.x,
+        anchorY: position.y
       };
     });
 
@@ -265,8 +288,8 @@ export function PaperCitationNetwork({ nodes, links, loading, error }: PaperCita
       .filter((link): link is CanvasLink => Boolean(link));
 
     graphRef.current = { nodes: canvasNodes, links: canvasLinks, staticMode };
-    defaultTransformRef.current = d3.zoomIdentity;
-    transformRef.current = d3.zoomIdentity;
+    defaultTransformRef.current = centerCroppedTransform(width, height, 1);
+    transformRef.current = defaultTransformRef.current;
 
     function draw() {
       const transform = transformRef.current;
@@ -302,45 +325,40 @@ export function PaperCitationNetwork({ nodes, links, loading, error }: PaperCita
 
     const zoom = d3.zoom<HTMLCanvasElement, unknown>()
       .scaleExtent([0.15, 10])
-      .filter((event) => event.type === 'wheel' || event.type === 'dblclick')
+      .filter((event) => event.type === 'dblclick')
       .on('zoom', (event) => {
         transformRef.current = event.transform;
         draw();
-      });
+    });
     zoomRef.current = zoom;
-    d3.select(canvas).call(zoom).call(zoom.transform, d3.zoomIdentity);
+    d3.select(canvas).call(zoom).call(zoom.transform, defaultTransformRef.current);
 
     const simulation = d3.forceSimulation<CanvasNode>(canvasNodes)
       .force('link', d3.forceLink<CanvasNode, CanvasLink>(canvasLinks).id((node) => node.id).distance(42).strength(0.07))
-      .force('charge', d3.forceManyBody<CanvasNode>().strength((node) => -22 - node.radius * 3.5).distanceMax(210))
+      .force('charge', d3.forceManyBody<CanvasNode>().strength((node) => -14 - node.radius * 2.8).distanceMax(150))
       .force('center', d3.forceCenter<CanvasNode>(width / 2, height / 2))
-      .force('x', d3.forceX<CanvasNode>(width / 2).strength(0.045))
-      .force('y', d3.forceY<CanvasNode>(height / 2).strength(0.045))
+      .force('x', d3.forceX<CanvasNode>((node) => node.anchorX ?? node.x).strength(0.025))
+      .force('y', d3.forceY<CanvasNode>((node) => node.anchorY ?? node.y).strength(0.025))
       .force('collision', d3.forceCollide<CanvasNode>().radius((node) => node.radius + 3).strength(0.62))
       .alpha(1)
-      .alphaDecay(0.035)
-      .velocityDecay(0.48)
+      .alphaDecay(staticMode ? 0.055 : 0.045)
+      .velocityDecay(0.52)
       .on('tick', draw)
-      .on('end', () => {
-        draw();
-        if (staticMode) simulationRef.current = null;
-      });
+      .on('end', () => draw());
     simulationRef.current = simulation;
     if (staticMode) {
       window.setTimeout(() => {
         simulation.stop();
         draw();
         if (simulationRef.current === simulation) simulationRef.current = null;
-      }, 4500);
+      }, 3200);
     }
 
     const drag = d3.drag<HTMLCanvasElement, unknown, CanvasNode | PanSubject>()
       .filter((event) => !event.button)
       .subject((event) => {
         const [x, y] = transformRef.current.invert(d3.pointer(event, canvas));
-        const node = !staticMode
-          ? simulationRef.current?.find(x, y, 24 / transformRef.current.k) ?? findNodeAt(canvasNodes, x, y)
-          : null;
+        const node = findNodeAt(canvasNodes, x, y);
         if (node) return node;
         const sourceEvent = event.sourceEvent as globalThis.MouseEvent;
         return {
@@ -356,9 +374,10 @@ export function PaperCitationNetwork({ nodes, links, loading, error }: PaperCita
           canvas.style.cursor = 'grabbing';
           return;
         }
-        if (simulationRef.current && !event.active) simulationRef.current.alphaTarget(0.22).restart();
+        if (simulationRef.current && !event.active) simulationRef.current.alphaTarget(0.18).restart();
         event.subject.fx = event.subject.x;
         event.subject.fy = event.subject.y;
+        canvas.style.cursor = 'grabbing';
       })
       .on('drag', (event) => {
         if (!event.subject) return;
@@ -383,15 +402,10 @@ export function PaperCitationNetwork({ nodes, links, loading, error }: PaperCita
           canvas.style.cursor = 'grab';
           return;
         }
-        if (simulationRef.current && !event.active) {
-          simulationRef.current.alpha(0.32).alphaTarget(0).restart();
-        }
+        if (simulationRef.current && !event.active) simulationRef.current.alphaTarget(0);
         event.subject.fx = null;
         event.subject.fy = null;
-        if (staticMode) {
-          event.subject.fx = null;
-          event.subject.fy = null;
-        }
+        canvas.style.cursor = 'grab';
       });
     d3.select(canvas).call(drag);
 
