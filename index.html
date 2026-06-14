@@ -3,35 +3,1613 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta http-equiv="refresh" content="0; url=preview.html" />
     <title>UW-Madison CS Research Network Dashboard</title>
-    <style>
-      body {
-        margin: 0;
-        min-height: 100vh;
-        display: grid;
-        place-items: center;
-        background: #f4f7fb;
-        color: #0f172a;
-        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      }
-
-      main {
-        max-width: 560px;
-        padding: 28px;
-        text-align: center;
-      }
-
-      a {
-        color: #1d4ed8;
-        font-weight: 700;
-      }
-    </style>
+    <link rel="stylesheet" href="src/index.css" />
   </head>
   <body>
-    <main>
-      <h1>Opening Dashboard Preview</h1>
-      <p>If the page does not open automatically, <a href="preview.html">open the preview dashboard</a>.</p>
-    </main>
+    <div class="app-shell">
+      <header class="page-header">
+        <div>
+          <p class="eyebrow">UW-Madison Computer Science</p>
+          <h1>Research Network Dashboard</h1>
+          <p class="subtext">Static preview reads split JSON files from the data/ folder.</p>
+        </div>
+      </header>
+
+      <section class="stat-grid" aria-label="Summary statistics">
+        <article class="stat-card"><span class="stat-label">Paper Nodes</span><strong id="paper-count">Not loaded</strong><span class="stat-note">Loaded from local citation files</span></article>
+        <article class="stat-card"><span class="stat-label">Citation Edges</span><strong id="edge-count">Not loaded</strong><span class="stat-note">Paper-to-paper citation links</span></article>
+        <article class="stat-card"><span class="stat-label">Timeline Years</span><strong id="year-count">Not loaded</strong><span class="stat-note">Paper growth records</span></article>
+        <article class="stat-card"><span class="stat-label">Patent Records</span><strong id="patent-count">Not loaded</strong><span class="stat-note">Metadata rows with patent counts</span></article>
+      </section>
+
+      <main class="dashboard-layout">
+        <section class="panel-card wide-panel">
+          <div class="panel-header">
+            <div>
+              <h2>Paper Citation Network, UW-Madison CS, 2019-2024.</h2>
+              <p class="panel-subtitle">Traditional force-directed citation graph with draggable paper nodes.</p>
+            </div>
+          </div>
+          <div class="section-info-stack">
+            <div id="network-state" class="info-panel">
+              <strong>Paper Citation Network Overview</strong>
+              <span>Paper and citation-link counts will appear here.</span>
+            </div>
+            <div id="network-detail" class="info-panel detail-panel">
+              <strong>Paper detail</strong>
+              <span>Hover a node to inspect paper details here. Click one to keep the details fixed; click it again to unpin. Double-click the network to zoom in.</span>
+            </div>
+          </div>
+          <div class="paper-filter-bar">
+            <label>
+              Year from
+              <select id="paper-year-start"><option value="all">All years</option></select>
+            </label>
+            <label>
+              Year to
+              <select id="paper-year-end"><option value="all">All years</option></select>
+            </label>
+            <label>
+              Min citations
+              <select id="paper-min-citations"></select>
+            </label>
+            <label>
+              Min degree
+              <select id="paper-min-degree"></select>
+            </label>
+            <label>
+              Min patents
+              <select id="paper-min-patents"></select>
+            </label>
+            <label>
+              Min references
+              <select id="paper-min-references"></select>
+            </label>
+            <label>
+              Display papers
+              <select id="paper-display-limit"></select>
+            </label>
+            <label class="checkbox-label">
+              <input id="paper-hide-isolated" type="checkbox" checked />
+              Hide isolated
+            </label>
+          </div>
+          <div id="network-shell" class="chart-shell citation-network-shell" hidden>
+            <div class="network-overlay-actions" aria-label="Paper citation network view controls">
+              <button type="button" class="icon-button" id="zoom-in-network" aria-label="Zoom in paper citation network">+</button>
+              <button type="button" class="icon-button" id="zoom-out-network" aria-label="Zoom out paper citation network">-</button>
+              <button type="button" class="secondary" id="reset-network">Reset View</button>
+              <button type="button" class="secondary" id="load-more-paper-network" hidden>Load More Data</button>
+            </div>
+            <canvas id="paper-network" class="network-canvas" role="img" aria-label="Paper citation force-directed graph"></canvas>
+          </div>
+          <div class="legend-card">
+            <strong>Legend</strong>
+            <ul>
+              <li>Node = paper; edge = citation relationship.</li>
+              <li>Node size represents citation count when available.</li>
+              <li>Node color represents publication year, topic, or cluster when available.</li>
+              <li>Drag empty space to move the network; drag nodes in dynamic views to inspect local neighborhoods.</li>
+            </ul>
+          </div>
+        </section>
+
+        <section class="paired-dashboard">
+          <section class="panel-card">
+            <div class="panel-header">
+              <div>
+                <h2>CS-Related Paper Growth at WISC Over the Past 10 Years.</h2>
+                <p class="panel-subtitle">Click a year to filter the histogram.</p>
+              </div>
+            </div>
+            <div class="section-info-stack">
+              <div id="timeline-state" class="info-panel">
+                <strong>Paper Growth Overview</strong>
+                <span>Year count and paper totals will appear here.</span>
+              </div>
+              <div id="timeline-detail" class="info-panel detail-panel">
+                <strong>Year detail</strong>
+                <span>Hover a bar to inspect year details here.</span>
+              </div>
+            </div>
+            <div id="timeline-shell" class="chart-shell compact-chart" hidden>
+              <svg id="paper-timeline" role="img" aria-label="Paper growth timeline"></svg>
+            </div>
+          </section>
+
+          <section class="panel-card">
+            <div class="panel-header">
+              <div>
+                <h2>Patent Citation Distribution.</h2>
+                <p id="histogram-subtitle" class="panel-subtitle">All Years</p>
+              </div>
+              <button class="secondary" id="reset-year">Reset Year Filter</button>
+            </div>
+            <div class="section-info-stack">
+              <div id="histogram-state" class="info-panel">
+                <strong>Patent Citation Distribution Overview</strong>
+                <span>Patent citation bin details will appear here.</span>
+              </div>
+              <div id="histogram-detail" class="info-panel detail-panel">
+                <strong>Patent-count detail</strong>
+                <span>Hover a bar to inspect patent-count details here.</span>
+              </div>
+            </div>
+            <div id="histogram-shell" class="chart-shell compact-chart" hidden>
+              <svg id="patent-histogram" role="img" aria-label="Patent citation distribution histogram"></svg>
+            </div>
+          </section>
+        </section>
+
+        <section class="panel-card wide-panel">
+          <div class="panel-header">
+            <div>
+              <h2>UW-Madison 5-Year Author Collaboration Network.</h2>
+              <p class="panel-subtitle">Traditional force-directed collaboration graph with draggable author nodes.</p>
+            </div>
+          </div>
+          <div class="panel-controls">
+            <label>
+              Year from
+              <select id="author-year-start" disabled>
+                <option value="all">All years</option>
+              </select>
+            </label>
+            <label>
+              Year to
+              <select id="author-year-end" disabled>
+                <option value="all">All years</option>
+              </select>
+            </label>
+            <label>
+              Min papers
+              <select id="author-min-papers"></select>
+            </label>
+            <label>
+              Min collaborators
+              <select id="author-min-collaborators"></select>
+            </label>
+            <label>
+              Min shared papers
+              <select id="author-min-shared"></select>
+            </label>
+            <label>
+              Display authors
+              <select id="author-display-limit"></select>
+            </label>
+          </div>
+          <div id="author-year-note" class="control-note" hidden>Year filters will activate when author collaboration data includes year fields.</div>
+          <div class="section-info-stack">
+            <div id="author-overview" class="info-panel">
+              <strong>Author collaboration overview</strong>
+              <span>Author nodes connected by co-authorship relationships.</span>
+            </div>
+            <div id="author-detail" class="info-panel detail-panel">
+              <strong>Author or collaboration detail</strong>
+              <span>Hover a node or edge to inspect details here. Click one to keep the details fixed; click it again to unpin. Double-click the network to zoom in.</span>
+            </div>
+          </div>
+          <div id="author-network-state" class="state-box" hidden></div>
+          <div id="author-network-shell" class="chart-shell citation-network-shell" hidden>
+            <div class="network-overlay-actions" aria-label="Author collaboration network view controls">
+              <button type="button" class="icon-button" id="zoom-in-author-network" aria-label="Zoom in author collaboration network">+</button>
+              <button type="button" class="icon-button" id="zoom-out-author-network" aria-label="Zoom out author collaboration network">-</button>
+              <button class="secondary" id="reset-author-network">Reset View</button>
+              <button type="button" class="secondary" id="load-more-author-network" hidden>Load More Data</button>
+            </div>
+            <canvas id="author-network" class="network-canvas" role="img" aria-label="Author collaboration force-directed graph"></canvas>
+          </div>
+          <div class="legend-card">
+            <strong>Legend</strong>
+            <ul>
+              <li>Node = author; edge = co-authorship relationship.</li>
+              <li>Node size represents paper count when available.</li>
+              <li>Node color represents institution, cluster, or group when available.</li>
+              <li>Filters limit authors by paper count, collaborator count, shared-paper strength, and display size.</li>
+              <li>Drag empty space to move the network; drag nodes in dynamic views to inspect local neighborhoods.</li>
+            </ul>
+          </div>
+        </section>
+      </main>
+
+      <section class="strategy-panel">
+        <h2>Scalability Strategy</h2>
+        <p>
+          To address scalability issues caused by the large dataset, this dashboard does not load the entire dataset directly into the frontend. Instead,
+          the data is preprocessed into a smaller initial subset, such as the top 300-500 most significant records, for the first visualization. Significance
+          can be determined by citation count, patent count, number of references, author influence, or network connectivity.
+        </p>
+        <p>
+          The website uses progressive data loading. The first screen provides a high-level overview of the citation network or author collaboration
+          network. When users interact with the visualization, such as clicking a node, selecting a year, or zooming into a cluster, the frontend can request
+          more related data from a backend so the network expands dynamically based on user interest instead of overwhelming the browser at the start.
+        </p>
+        <p>
+          This strategy improves loading speed, reduces memory pressure, and keeps the visualization readable. It also creates a better user experience
+          because users can begin with a simplified overview and then explore more detailed relationships interactively.
+        </p>
+      </section>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+    <script>
+      const dataBase = '';
+      let selectedYear = null;
+      let patentRows = [];
+      let patentRowsAreAggregated = false;
+      let networkZoom = null;
+      let networkTransform = d3.zoomIdentity;
+      let networkDefaultTransform = d3.zoomIdentity;
+      let networkSimulation = null;
+      let paperDetailPinned = false;
+      let paperPinnedId = null;
+      let paperNodes = [];
+      let paperLinks = [];
+      let paperYearOptions = [];
+      let paperNetworkManifest = null;
+      let paperNetworkLoadedAll = false;
+      let authorNetworkZoom = null;
+      let authorNetworkTransform = d3.zoomIdentity;
+      let authorNetworkDefaultTransform = d3.zoomIdentity;
+      let authorNetworkSimulation = null;
+      let authorNodes = [];
+      let authorLinks = [];
+      let authorYearOptions = [];
+      let authorNetworkManifest = null;
+      let authorNetworkLoadedAll = false;
+      let authorDetailPinned = false;
+      let authorPinnedKey = null;
+      let previewTooltipTimer = null;
+      const authorDisplayNodeLimit = 1000;
+      const staticAuthorLayoutNodeThreshold = 1000;
+      const staticAuthorRenderLinkLimit = 80000;
+      const paperCountOptions = [1, 2, 5, 10, 25, 50, 100];
+      const paperCitationOptions = [0, 1, 5, 10, 25, 50, 100];
+      const paperDegreeOptions = [0, 1, 2, 5, 10, 25, 50];
+      const paperPatentOptions = [0, 1, 2, 5, 10, 25, 50];
+      const paperReferenceOptions = [0, 5, 10, 25, 50, 100];
+      const paperDisplayOptions = [250, 500, 1000, 2000, 5000, 'all'];
+      const collaboratorCountOptions = [0, 5, 10, 25, 50, 100, 200];
+      const sharedPaperOptions = [1, 2, 5, 10, 25, 50, 100];
+      const displayLimitOptions = [250, 500, 1000, 2000, 5000, 'all'];
+
+      async function loadJson(name) {
+        return loadFirstJson([name]);
+      }
+
+      async function loadFirstJson(paths) {
+        const failures = [];
+        for (const path of paths) {
+          try {
+            const response = await fetch(path, { cache: 'no-store' });
+            if (!response.ok) {
+              failures.push(`${path}: HTTP ${response.status}`);
+              continue;
+            }
+            const text = await response.text();
+            if (text.startsWith('version https://git-lfs.github.com/spec/v1')) {
+              failures.push(`${path}: Git LFS pointer, not JSON`);
+              continue;
+            }
+            return JSON.parse(text);
+          } catch (error) {
+            failures.push(`${path}: ${error.message || error}`);
+          }
+        }
+        throw new Error(failures.join(' | '));
+      }
+
+      async function loadNetworkFiles(files, statusSelector, label) {
+        const allNodes = new Map();
+        const allLinks = [];
+        for (let index = 0; index < files.length; index += 1) {
+          const file = files[index];
+          try {
+            if (statusSelector) {
+              document.querySelector(statusSelector).textContent = `Loading network data... ${index + 1}/${files.length}: ${file}`;
+            }
+            const data = await loadFirstJson([file]);
+            (data.nodes || []).forEach((node) => allNodes.set(String(node.id), node));
+            (data.links || data.edges || []).forEach((link) => allLinks.push(link));
+          } catch (error) {
+            console.error(`Failed to load ${file}`, error);
+            throw new Error(`${label} file failed: ${file}. ${error.message || error}`);
+          }
+        }
+        return {
+          nodes: Array.from(allNodes.values()),
+          links: allLinks
+        };
+      }
+
+      function setInfo(panelId, title, lines) {
+        const panel = document.querySelector(panelId);
+        if (!panel) return;
+        panel.innerHTML = `<strong>${title}</strong>${lines.map((line) => `<span>${line}</span>`).join('')}`;
+      }
+
+      function showPreviewTooltip(event, title, lines) {
+        if (previewTooltipTimer) window.clearTimeout(previewTooltipTimer);
+        let tooltip = document.querySelector('#preview-floating-tooltip');
+        if (!tooltip) {
+          tooltip = document.createElement('div');
+          tooltip.id = 'preview-floating-tooltip';
+          tooltip.className = 'floating-tooltip';
+          document.body.appendChild(tooltip);
+        }
+        tooltip.innerHTML = `<strong>${title}</strong>${lines.map((line) => `<span>${line}</span>`).join('')}`;
+        tooltip.style.left = `${event.clientX + 16}px`;
+        tooltip.style.top = `${event.clientY + 8}px`;
+        tooltip.className = 'floating-tooltip visible';
+      }
+
+      function fadePreviewTooltip() {
+        const tooltip = document.querySelector('#preview-floating-tooltip');
+        if (!tooltip) return;
+        tooltip.className = 'floating-tooltip fading';
+        if (previewTooltipTimer) window.clearTimeout(previewTooltipTimer);
+        previewTooltipTimer = window.setTimeout(() => tooltip.remove(), 1800);
+      }
+
+      function numericValue(value) {
+        const number = Number(value);
+        return Number.isFinite(number) ? number : undefined;
+      }
+
+      function collectYears(record) {
+        if (!record) return [];
+        const yearFields = ['year', 'publication_year', 'publicationYear', 'years', 'publication_years', 'publicationYears', 'shared_years', 'sharedYears'];
+        return yearFields.flatMap((field) => {
+          const value = record[field];
+          const values = Array.isArray(value) ? value : [value];
+          return values
+            .map(numericValue)
+            .filter((year) => Number.isFinite(year) && year >= 1900 && year <= 2100);
+        });
+      }
+
+      function itemYears(item) {
+        return [...collectYears(item), ...collectYears(item.raw)];
+      }
+
+      function overlapsYearRange(years, startYear, endYear) {
+        if (!years.length) return true;
+        return years.some((year) => year >= startYear && year <= endYear);
+      }
+
+      function populateSelect(selector, values, formatter = (value) => value) {
+        const select = document.querySelector(selector);
+        if (!select) return;
+        select.innerHTML = values.map((value) => `<option value="${value}">${formatter(value)}</option>`).join('');
+      }
+
+      function displayLimitLabel(value) {
+        if (value === 'all') return 'All (highly unrecommended)';
+        const count = Number(value);
+        const label = `Top ${count.toLocaleString()}`;
+        return count >= 5000 ? `${label} (highly unrecommended)` : label;
+      }
+
+      function stableHash(value) {
+        let hash = 0;
+        String(value).split('').forEach((char) => {
+          hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+        });
+        return hash;
+      }
+
+      function seededUnit(value, salt = '') {
+        return (stableHash(`${value}:${salt}`) % 10000) / 10000;
+      }
+
+      function seededScatterPosition(id, index, width, height, spread = 1, group = 'network') {
+        const groupX = 0.18 + seededUnit(group, 'group-x') * 0.64;
+        const groupY = 0.18 + seededUnit(group, 'group-y') * 0.64;
+        const xNoise = (seededUnit(id, 'x') - 0.5) * 0.92 * spread;
+        const yNoise = (seededUnit(id, 'y') - 0.5) * 0.92 * spread;
+        const skew = (seededUnit(`${id}-${index}`, 'skew') - 0.5) * 0.16 * spread;
+        const wave = Math.sin((index * 0.73 + seededUnit(group, 'wave') * 6.28)) * 0.045 * spread;
+        return {
+          x: width * Math.max(0.04, Math.min(0.96, groupX + xNoise * 0.52 + skew)),
+          y: height * Math.max(0.06, Math.min(0.94, groupY + yNoise * 0.48 + wave - skew * 0.35))
+        };
+      }
+
+      function fitTransformForNodes(nodes, width, height, padding = 36) {
+        if (!nodes.length) return d3.zoomIdentity;
+        const minX = d3.min(nodes, (node) => (node.x || 0) - (node.radius || 0)) ?? 0;
+        const maxX = d3.max(nodes, (node) => (node.x || 0) + (node.radius || 0)) ?? width;
+        const minY = d3.min(nodes, (node) => (node.y || 0) - (node.radius || 0)) ?? 0;
+        const maxY = d3.max(nodes, (node) => (node.y || 0) + (node.radius || 0)) ?? height;
+        const graphWidth = Math.max(1, maxX - minX);
+        const graphHeight = Math.max(1, maxY - minY);
+        const scale = Math.min((width - padding * 2) / graphWidth, (height - padding * 2) / graphHeight, 1.25);
+        return d3.zoomIdentity
+          .translate(width / 2 - ((minX + maxX) / 2) * scale, height / 2 - ((minY + maxY) / 2) * scale)
+          .scale(scale);
+      }
+
+      function centerCroppedTransform(width, height, scale = 3) {
+        return d3.zoomIdentity
+          .translate(width / 2 - (width / 2) * scale, height / 2 - (height / 2) * scale)
+          .scale(scale);
+      }
+
+      function distanceToSegment(px, py, x1, y1, x2, y2) {
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        if (dx === 0 && dy === 0) return Math.hypot(px - x1, py - y1);
+        const t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / (dx * dx + dy * dy)));
+        return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy));
+      }
+
+      async function initNetwork() {
+        try {
+          document.querySelector('#network-state').textContent = 'Loading network data...';
+          paperNetworkManifest = await loadFirstJson(['data/citation_network_manifest.json']).catch(() => null);
+          const graph = await loadFirstJson(['data/citation_network_top500.json']);
+          paperNetworkLoadedAll = false;
+          applyPaperGraph(graph);
+        } catch (error) {
+          document.querySelector('#network-state').textContent = `Paper citation JSON could not be loaded. ${error.message || error}`;
+        }
+      }
+
+      function applyPaperGraph(graph) {
+          paperNodes = (graph.nodes || []).map((node) => ({
+            ...node,
+            id: String(node.id),
+            title: String(node.title || node.id),
+            citations: Number(node.citationCount || node.citation_count || node.importance || 0),
+            referenceCount: Number(node.referenceCount || node.reference_count || 0),
+            patentCount: Number(node.patentCount || node.patent_count || 0),
+            totalDegree: Number(node.totalDegree || node.total_degree || 0),
+            year: Number.isFinite(Number(node.year)) ? Number(node.year) : undefined,
+            cluster: node.cluster || node.topic || node.doctype || node.year || 'Unknown'
+          }));
+          paperLinks = graph.links || [];
+          paperYearOptions = [...new Set(paperNodes.map((node) => node.year).filter((year) => Number.isFinite(year)))].sort((a, b) => a - b);
+          ['#paper-year-start', '#paper-year-end'].forEach((selector) => {
+            const select = document.querySelector(selector);
+            select.innerHTML = '<option value="all">All years</option>' + paperYearOptions.map((year) => `<option value="${year}">${year}</option>`).join('');
+          });
+          if (!paperNodes.length) {
+            document.querySelector('#network-state').textContent = 'Prepared paper citation JSON is empty. Split the raw network into data/citation_network_top500.json and part files.';
+            return;
+          }
+          document.querySelector('#paper-count').textContent = paperNodes.length.toLocaleString();
+          document.querySelector('#edge-count').textContent = paperLinks.length.toLocaleString();
+          document.querySelector('#network-shell').hidden = false;
+          const loadMoreButton = document.querySelector('#load-more-paper-network');
+          loadMoreButton.hidden = !paperNetworkManifest || paperNetworkLoadedAll;
+          loadMoreButton.disabled = false;
+          loadMoreButton.textContent = paperNetworkLoadedAll ? 'All Data Loaded' : 'Load More Data';
+          renderPaperNetwork();
+      }
+
+      function renderPaperNetwork() {
+        if (!paperNodes.length) return;
+        const degree = new Map();
+        paperLinks.forEach((link) => {
+          const source = String(typeof link.source === 'object' ? link.source.id : link.source || '');
+          const target = String(typeof link.target === 'object' ? link.target.id : link.target || '');
+          degree.set(source, (degree.get(source) || 0) + 1);
+          degree.set(target, (degree.get(target) || 0) + 1);
+        });
+        const startValue = document.querySelector('#paper-year-start').value;
+        const endValue = document.querySelector('#paper-year-end').value;
+        const firstYear = paperYearOptions[0] ?? Number.NEGATIVE_INFINITY;
+        const lastYear = paperYearOptions[paperYearOptions.length - 1] ?? Number.POSITIVE_INFINITY;
+        const yearStart = startValue === 'all' ? firstYear : Number(startValue);
+        const yearEnd = endValue === 'all' ? lastYear : Number(endValue);
+        const normalizedStart = Math.min(yearStart, yearEnd);
+        const normalizedEnd = Math.max(yearStart, yearEnd);
+        const minCitations = Number(document.querySelector('#paper-min-citations').value || 0);
+        const minDegree = Number(document.querySelector('#paper-min-degree').value || 0);
+        const minPatents = Number(document.querySelector('#paper-min-patents').value || 0);
+        const minReferences = Number(document.querySelector('#paper-min-references').value || 0);
+        const displayLimitValue = document.querySelector('#paper-display-limit').value || '500';
+        const displayLimit = displayLimitValue === 'all' ? 'all' : Number(displayLimitValue);
+        const hideIsolated = document.querySelector('#paper-hide-isolated').checked;
+        const filteredNodes = paperNodes.filter((node) => {
+          if (Number.isFinite(node.year) && (node.year < normalizedStart || node.year > normalizedEnd)) return false;
+          if ((node.citations || 0) < minCitations) return false;
+          if ((degree.get(node.id) || node.totalDegree || 0) < minDegree) return false;
+          if ((node.patentCount || 0) < minPatents) return false;
+          if ((node.referenceCount || 0) < minReferences) return false;
+          if (hideIsolated && (degree.get(node.id) || node.totalDegree || 0) === 0) return false;
+          return true;
+        });
+        const nodes = [...filteredNodes]
+          .sort((a, b) => ((b.totalDegree || 0) * 4 + (b.citations || 0) * 3 + (b.patentCount || 0) * 2 + (b.referenceCount || 0)) - ((a.totalDegree || 0) * 4 + (a.citations || 0) * 3 + (a.patentCount || 0) * 2 + (a.referenceCount || 0)));
+        const visibleNodes = displayLimit === 'all' ? nodes : nodes.slice(0, displayLimit);
+        const visibleIds = new Set(visibleNodes.map((node) => node.id));
+        const links = paperLinks.filter((link) => visibleIds.has(String(typeof link.source === 'object' ? link.source.id : link.source || '')) && visibleIds.has(String(typeof link.target === 'object' ? link.target.id : link.target || '')));
+        setInfo('#network-state', 'Paper Citation Network Overview', [
+          `Loaded ${paperNodes.length.toLocaleString()} nodes and ${paperLinks.length.toLocaleString()} links.`,
+          `${visibleNodes.length.toLocaleString()} papers displayed`,
+          `${links.length.toLocaleString()} citation links displayed`,
+          'Layout mode: dynamic spring layout.',
+          'Hover a node or edge to inspect details. Click a node to keep its details fixed; click the same node again to unpin. Double-click the network to zoom in.'
+        ]);
+        drawNetwork(visibleNodes, links);
+      }
+
+      function drawNetwork(nodes, links, forceStaticLayout = false) {
+        const shell = document.querySelector('#network-shell');
+        const width = Math.max(shell.clientWidth, 640);
+        const height = 540;
+        const canvas = document.querySelector('#paper-network');
+        const context = canvas.getContext('2d');
+        const pixelRatio = window.devicePixelRatio || 1;
+        canvas.width = width * pixelRatio;
+        canvas.height = height * pixelRatio;
+        canvas.style.width = `${width}px`;
+        canvas.style.height = `${height}px`;
+        context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+        networkTransform = d3.zoomIdentity;
+        if (networkSimulation) networkSimulation.stop();
+
+        networkZoom = d3.zoom()
+          .scaleExtent([0.15, 10])
+          .filter((event) => event.type === 'dblclick')
+          .on('zoom', (event) => {
+            networkTransform = event.transform;
+            draw();
+          });
+        d3.select(canvas).call(networkZoom);
+        const palette = ['#4e79a7', '#f28e2b', '#59a14f', '#e15759', '#b07aa1', '#edc948', '#76b7b2', '#ff9da7', '#9c755f', '#bab0ac'];
+        const color = (key) => palette[stableHash(key) % palette.length];
+        const radius = d3.scaleSqrt().domain([0, d3.max(nodes, (d) => d.citations) || 1]).range([2.2, 11]);
+        const importantNodes = new Set(
+          [...nodes]
+            .sort((a, b) => ((b.totalDegree || 0) * 4 + b.citations * 3 + (b.patentCount || 0) * 2 + (b.referenceCount || 0)) - ((a.totalDegree || 0) * 4 + a.citations * 3 + (a.patentCount || 0) * 2 + (a.referenceCount || 0)))
+            .slice(0, 14)
+            .map((node) => node.id)
+        );
+        nodes.forEach((node, index) => {
+          const group = String(node.cluster || node.topic || node.doctype || node.group || node.year || 'Unknown');
+          const position = seededScatterPosition(node.id, index, width, height, nodes.length > 2000 ? 1.9 : 1, group);
+          node.radius = radius(node.citations);
+          node.color = color(group);
+          node.x = position.x;
+          node.y = position.y;
+          node.anchorX = position.x;
+          node.anchorY = position.y;
+        });
+        const nodeById = new Map(nodes.map((node) => [node.id, node]));
+        const visibleLinks = links
+          .map((link) => {
+            const source = nodeById.get(typeof link.source === 'object' ? link.source.id : String(link.source));
+            const target = nodeById.get(typeof link.target === 'object' ? link.target.id : String(link.target));
+            return source && target ? { ...link, source, target } : null;
+          })
+          .filter(Boolean);
+        const useStaticPaperLayout = forceStaticLayout || nodes.length > 2000;
+        canvas.dataset.layoutMode = useStaticPaperLayout ? 'static' : 'dynamic';
+        networkDefaultTransform = centerCroppedTransform(width, height, 1);
+        networkTransform = networkDefaultTransform;
+        d3.select(canvas).call(networkZoom.transform, networkDefaultTransform);
+
+        function draw() {
+          const transform = networkTransform;
+          context.save();
+          context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+          context.fillStyle = '#ffffff';
+          context.fillRect(0, 0, width, height);
+          context.translate(transform.x, transform.y);
+          context.scale(transform.k, transform.k);
+
+          context.globalAlpha = transform.k < 0.55 ? 0.12 : 0.28;
+          context.strokeStyle = '#9ca3af';
+          context.lineWidth = Math.max(0.25, 0.8 / transform.k);
+          visibleLinks.forEach((link) => {
+            context.beginPath();
+            context.moveTo(link.source.x || 0, link.source.y || 0);
+            context.lineTo(link.target.x || 0, link.target.y || 0);
+            context.stroke();
+          });
+
+          context.globalAlpha = 0.94;
+          nodes.forEach((node) => {
+            context.beginPath();
+            context.arc(node.x || 0, node.y || 0, node.radius, 0, Math.PI * 2);
+            context.fillStyle = node.color;
+            context.fill();
+            context.strokeStyle = 'rgba(255,255,255,0.92)';
+            context.lineWidth = Math.max(0.7, 1.2 / transform.k);
+            context.stroke();
+          });
+          if (transform.k > 1.05) {
+            context.globalAlpha = 0.92;
+            context.fillStyle = '#334155';
+            context.font = `${Math.max(9, 11 / transform.k)}px Inter, sans-serif`;
+            nodes.forEach((node) => {
+              if (!importantNodes.has(node.id)) return;
+              const label = node.title && node.title !== node.id ? node.title : node.id;
+              context.fillText(label.slice(0, 34), (node.x || 0) + node.radius + 3, (node.y || 0) + 3);
+            });
+          }
+          context.restore();
+        }
+
+        function findNode(event) {
+          const rect = canvas.getBoundingClientRect();
+          const [x, y] = networkTransform.invert([event.clientX - rect.left, event.clientY - rect.top]);
+          for (let i = nodes.length - 1; i >= 0; i -= 1) {
+            const node = nodes[i];
+            const dx = x - (node.x || 0);
+            const dy = y - (node.y || 0);
+            if (dx * dx + dy * dy <= Math.max(node.radius + 3, 6) ** 2) return node;
+          }
+          return null;
+        }
+
+        function findPaperItem(event) {
+          const node = findNode(event);
+          if (node) return { type: 'node', node };
+          const rect = canvas.getBoundingClientRect();
+          const [x, y] = networkTransform.invert([event.clientX - rect.left, event.clientY - rect.top]);
+          for (const link of visibleLinks) {
+            const distance = distanceToSegment(x, y, link.source.x || 0, link.source.y || 0, link.target.x || 0, link.target.y || 0);
+            if (distance <= Math.max(5, Math.sqrt(Number(link.weight || 1)) / 2)) return { type: 'link', link };
+          }
+          return null;
+        }
+
+        networkSimulation = d3.forceSimulation(nodes)
+            .force('link', d3.forceLink(visibleLinks).id((d) => d.id).distance((link) => 28 + Math.max(link.source.radius, link.target.radius) * 1.8).strength(0.24))
+            .force('charge', d3.forceManyBody().strength((node) => -14 - node.radius * 2.8).distanceMax(150))
+            .force('center', d3.forceCenter(width / 2, height / 2))
+            .force('x', d3.forceX((node) => node.anchorX).strength(0.025))
+            .force('y', d3.forceY((node) => node.anchorY).strength(0.025))
+            .force('collision', d3.forceCollide((d) => d.radius + 2.1).strength(0.48))
+            .alpha(1)
+            .alphaDecay(useStaticPaperLayout ? 0.055 : 0.045)
+            .velocityDecay(0.52)
+            .on('tick', draw)
+            .on('end', draw);
+        if (useStaticPaperLayout) {
+          window.setTimeout(() => {
+            networkSimulation?.stop();
+            networkSimulation = null;
+            draw();
+          }, 3200);
+        }
+
+        d3.select(canvas).call(d3.drag()
+          .filter((event) => !event.button)
+          .subject((event) => {
+            const node = findNode({ clientX: event.sourceEvent.clientX, clientY: event.sourceEvent.clientY });
+            if (node) return node;
+            return {
+              isPanSubject: true,
+              startX: event.sourceEvent.clientX,
+              startY: event.sourceEvent.clientY,
+              startTransform: networkTransform
+            };
+          })
+          .on('start', (event) => {
+            if (!event.subject) return;
+            if (event.subject.isPanSubject) {
+              canvas.style.cursor = 'grabbing';
+              return;
+            }
+            if (networkSimulation && !event.active) networkSimulation.alphaTarget(0.18).restart();
+            event.subject.fx = event.subject.x;
+            event.subject.fy = event.subject.y;
+            canvas.style.cursor = 'grabbing';
+          })
+          .on('drag', (event) => {
+            if (!event.subject) return;
+            if (event.subject.isPanSubject) {
+              const dx = event.sourceEvent.clientX - event.subject.startX;
+              const dy = event.sourceEvent.clientY - event.subject.startY;
+              const nextTransform = d3.zoomIdentity
+                .translate(event.subject.startTransform.x + dx, event.subject.startTransform.y + dy)
+                .scale(event.subject.startTransform.k);
+              d3.select(canvas).call(networkZoom.transform, nextTransform);
+              return;
+            }
+            const [x, y] = networkTransform.invert(d3.pointer(event, canvas));
+            event.subject.x = x;
+            event.subject.y = y;
+            event.subject.fx = x;
+            event.subject.fy = y;
+            draw();
+          })
+          .on('end', (event) => {
+            if (!event.subject) return;
+            if (event.subject.isPanSubject) {
+              canvas.style.cursor = 'grab';
+              return;
+            }
+            if (networkSimulation && !event.active) networkSimulation.alphaTarget(0);
+            event.subject.fx = null;
+            event.subject.fy = null;
+            canvas.style.cursor = 'grab';
+          }));
+
+        canvas.onpointermove = (event) => {
+          const item = findPaperItem(event);
+          if (!item) {
+            canvas.style.cursor = 'grab';
+            fadePreviewTooltip();
+            return;
+          }
+          canvas.style.cursor = 'pointer';
+          if (item.type === 'node') {
+            const node = item.node;
+            showPreviewTooltip(event, node.title || node.id, [`Paper ID: ${node.id}`, `Year: ${node.year || 'Unknown'}`, `Citation count: ${node.citations}`, `Total degree: ${node.totalDegree || 0}`, `Patent count: ${node.patentCount || 0}`]);
+            if (!paperDetailPinned) {
+            setInfo('#network-detail', node.title || node.id, [`Paper ID: ${node.id}`, `Year: ${node.year || 'Unknown'}`, `Citation count: ${node.citations}`, `Total degree: ${node.totalDegree || 0}`, `Patent count: ${node.patentCount || 0}`]);
+            }
+          } else {
+            showPreviewTooltip(event, 'Citation edge', [
+              `Source: ${item.link.source.title || item.link.source.id}`,
+              `Target: ${item.link.target.title || item.link.target.id}`,
+              `Weight: ${item.link.weight || 1}`
+            ]);
+          }
+        };
+        canvas.onpointerleave = () => {
+          canvas.style.cursor = 'grab';
+          fadePreviewTooltip();
+          if (!paperDetailPinned) setInfo('#network-detail', 'Paper detail', ['Hover a node to inspect paper details here. Click one to keep the details fixed; click it again to unpin.']);
+        };
+        canvas.onclick = (event) => {
+          const node = findNode(event);
+          if (node && paperPinnedId === node.id) {
+            paperDetailPinned = false;
+            paperPinnedId = null;
+            setInfo('#network-detail', 'Paper detail', ['Hover a node to inspect paper details here. Click one to keep the details fixed; click it again to unpin.']);
+            return;
+          }
+          paperDetailPinned = Boolean(node);
+          paperPinnedId = node ? node.id : null;
+          if (node) {
+            setInfo('#network-detail', `Pinned: ${node.title || node.id}`, [`Paper ID: ${node.id}`, `Year: ${node.year || 'Unknown'}`, `Citation count: ${node.citations}`, `Total degree: ${node.totalDegree || 0}`, `Patent count: ${node.patentCount || 0}`]);
+            return;
+          }
+          setInfo('#network-detail', 'Paper detail', ['Hover a node to inspect paper details here. Click one to keep the details fixed; click it again to unpin.']);
+        };
+        draw();
+      }
+
+      async function initTimeline() {
+        try {
+          let data;
+          try {
+            const rootGrowth = await loadFirstJson(['paper_growth_10yr.json']);
+            if (!data && Array.isArray(rootGrowth) && rootGrowth.length) {
+              data = rootGrowth.map((row) => ({
+                year: Number(row.year),
+                count: Number(row.count || row.paper_count || row.paperCount || 0)
+              })).filter((row) => Number.isFinite(row.year) && row.year > 0);
+            }
+          } catch {}
+          if (!data) {
+            data = await loadFirstJson(['paper_growth_10yr.json']);
+          }
+          if (!data.length) {
+            document.querySelector('#timeline-state').textContent = 'Prepared paper growth JSON is empty. Add raw data and rerun the preprocessing script.';
+            return;
+          }
+          data.sort((a, b) => a.year - b.year);
+          document.querySelector('#year-count').textContent = Math.min(data.length, 10).toLocaleString();
+          document.querySelector('#timeline-shell').hidden = false;
+          setInfo('#timeline-state', 'Paper Growth Overview', [
+            `${data.length.toLocaleString()} years displayed`,
+            `${d3.sum(data, (d) => d.count).toLocaleString()} total CS-related papers`,
+            'Hover a bar to inspect a year. Click a bar to update the patent citation histogram.'
+          ]);
+          drawTimeline(data);
+        } catch (error) {
+          document.querySelector('#timeline-state').textContent = `Paper growth JSON could not be loaded. ${error.message || error}`;
+        }
+      }
+
+      function drawTimeline(data) {
+        const shell = document.querySelector('#timeline-shell');
+        const width = Math.max(shell.clientWidth, 520), height = 360;
+        const margin = { top: 24, right: 22, bottom: 58, left: 64 };
+        const svg = d3.select('#paper-timeline').attr('viewBox', `0 0 ${width} ${height}`);
+        svg.selectAll('*').remove();
+        const innerWidth = width - margin.left - margin.right, innerHeight = height - margin.top - margin.bottom;
+        const chart = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+        const x = d3.scaleBand().domain(data.map((d) => d.year)).range([0, innerWidth]).padding(0.22);
+        const y = d3.scaleLinear().domain([0, d3.max(data, (d) => d.count) || 1]).nice().range([innerHeight, 0]);
+        chart.append('g').attr('transform', `translate(0,${innerHeight})`).call(d3.axisBottom(x));
+        chart.append('g').call(d3.axisLeft(y).ticks(5));
+        chart.append('text').attr('x', innerWidth / 2).attr('y', innerHeight + 46).attr('text-anchor', 'middle').attr('class', 'axis-label').text('Year');
+        chart.append('text').attr('transform', 'rotate(-90)').attr('x', -innerHeight / 2).attr('y', -46).attr('text-anchor', 'middle').attr('class', 'axis-label').text('Number of papers');
+        chart.selectAll('rect').data(data).join('rect')
+          .attr('x', (d) => x(d.year))
+          .attr('y', (d) => y(d.count))
+          .attr('width', x.bandwidth())
+          .attr('height', (d) => innerHeight - y(d.count))
+          .attr('rx', 4)
+          .attr('fill', (d) => d.year === selectedYear ? '#b91c1c' : '#2563eb')
+          .attr('opacity', 0.9)
+          .style('cursor', 'pointer')
+          .on('click', (_, d) => { selectedYear = d.year; drawTimeline(data); drawHistogram(); })
+            .on('mouseenter', (event, d) => {
+              setInfo('#timeline-detail', `${d.year}`, [`${d.count.toLocaleString()} CS-related papers`, 'Click this bar to filter the patent citation histogram.']);
+              showPreviewTooltip(event, `${d.year}: ${d.count.toLocaleString()} papers`, ['CS-related papers', 'Click to filter patent citations']);
+            })
+            .on('mousemove', (event, d) => showPreviewTooltip(event, `${d.year}: ${d.count.toLocaleString()} papers`, ['CS-related papers', 'Click to filter patent citations']))
+            .on('mouseleave', fadePreviewTooltip);
+      }
+
+      async function initHistogram() {
+        try {
+          const yearlyDistribution = await loadFirstJson(['patent_histogram_by_year.json']).catch(() => null);
+          if (yearlyDistribution && yearlyDistribution.patentHistogramByYear) {
+            patentRows = Object.entries(yearlyDistribution.patentHistogramByYear).flatMap(([year, bins]) =>
+              bins.map((row) => ({
+                year: Number(year),
+                patentCount: Number(row.patent_count || row.patentCount || 0),
+                paperCount: Number(row.paper_count || row.paperCount || 0)
+              }))
+            );
+            patentRowsAreAggregated = true;
+          }
+          if (!patentRows.length) {
+            const distribution = await loadFirstJson(['patent_count_distribution.json']);
+            if (distribution && distribution.by_year) {
+              patentRows = Object.entries(distribution.by_year).flatMap(([year, bins]) =>
+                bins.map((row) => ({
+                  year: Number(year),
+                  patentCount: Number(row.patent_count || row.patentCount || 0),
+                  paperCount: Number(row.paper_count || row.paperCount || 0)
+                }))
+              );
+              patentRowsAreAggregated = true;
+            } else if (distribution && Array.isArray(distribution.years)) {
+              patentRows = distribution.years.flatMap((entry) =>
+                (entry.histogram || []).map((row) => ({
+                  year: Number(entry.year),
+                  patentCount: Number(row.patent_count || row.patentCount || 0),
+                  paperCount: Number(row.paper_count || row.paperCount || 0)
+                }))
+              );
+              patentRowsAreAggregated = true;
+            } else if (distribution && Array.isArray(distribution.histogram)) {
+              patentRows = distribution.histogram.map((row) => ({
+                patentCount: Number(row.patent_count || row.patentCount || 0),
+                paperCount: Number(row.paper_count || row.paperCount || 0)
+              }));
+              patentRowsAreAggregated = true;
+            } else {
+              throw new Error('patent_count_distribution.json did not contain histogram, by_year, or years data.');
+            }
+          }
+          if (!patentRows.length) {
+            document.querySelector('#histogram-state').textContent = 'Prepared patent citation JSON is empty. Add raw metadata and rerun the preprocessing script.';
+            return;
+          }
+          document.querySelector('#patent-count').textContent = patentRows.length.toLocaleString();
+          document.querySelector('#histogram-shell').hidden = false;
+          setInfo('#histogram-state', 'Patent Citation Distribution Overview', ['Showing all years. Hover a bar to inspect a patent-count bin.']);
+          drawHistogram();
+        } catch (error) {
+          document.querySelector('#histogram-state').textContent = `Patent citation distribution JSON could not be loaded. ${error.message || error}`;
+        }
+      }
+
+      function drawHistogram() {
+        const hasYearSpecificPatentRows = patentRows.some((row) => Number.isFinite(row.year));
+        let filtered = selectedYear === null ? patentRows : hasYearSpecificPatentRows ? patentRows.filter((row) => row.year === selectedYear) : [];
+        if (selectedYear === null && patentRowsAreAggregated && hasYearSpecificPatentRows) {
+          filtered = Array.from(
+            d3.rollup(filtered, (records) => d3.sum(records, (record) => record.paperCount || 0), (record) => record.patentCount),
+            ([patentCount, paperCount]) => ({ patentCount, paperCount })
+          ).sort((a, b) => a.patentCount - b.patentCount);
+        }
+        document.querySelector('#histogram-subtitle').textContent = selectedYear === null ? 'All Years' : `Selected Year: ${selectedYear}`;
+        if (!filtered.length) {
+          document.querySelector('#histogram-shell').hidden = true;
+          document.querySelector('#histogram-state').textContent = selectedYear === null
+            ? 'Patent citation distribution data is not loaded yet.'
+            : 'Year-specific patent citation distribution is not available in patent_count_distribution.json.';
+          return;
+        }
+        document.querySelector('#histogram-shell').hidden = false;
+        setInfo('#histogram-state', 'Patent Citation Distribution Overview', [
+          selectedYear === null ? 'Showing all years.' : `Showing selected year: ${selectedYear}.`,
+          'Hover a bar to inspect a patent-count bin.'
+        ]);
+        const shell = document.querySelector('#histogram-shell');
+        const width = Math.max(shell.clientWidth, 520), height = 360;
+        const margin = { top: 24, right: 22, bottom: 58, left: 64 };
+        const svg = d3.select('#patent-histogram').attr('viewBox', `0 0 ${width} ${height}`);
+        svg.selectAll('*').remove();
+        const innerWidth = width - margin.left - margin.right, innerHeight = height - margin.top - margin.bottom;
+        const chart = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+        const defs = svg.append('defs');
+        const barGradient = defs.append('linearGradient').attr('id', 'preview-patent-bar-gradient').attr('x1', '0').attr('x2', '0').attr('y1', '0').attr('y2', '1');
+        barGradient.append('stop').attr('offset', '0%').attr('stop-color', '#149b91');
+        barGradient.append('stop').attr('offset', '100%').attr('stop-color', '#0f766e');
+        const upperBarGradient = defs.append('linearGradient').attr('id', 'preview-patent-upper-bar-gradient').attr('x1', '0').attr('x2', '0').attr('y1', '0').attr('y2', '1');
+        upperBarGradient.append('stop').attr('offset', '0%').attr('stop-color', '#0f766e');
+        upperBarGradient.append('stop').attr('offset', '100%').attr('stop-color', '#0b5f59');
+        if (patentRowsAreAggregated) {
+          const axisCap = 8;
+          const counts = new Map(filtered.map((row) => [row.patentCount, row.paperCount || 0]));
+          const maxPatentCount = d3.max(filtered, (row) => row.patentCount) || 0;
+          const bars = Array.from({ length: Math.min(axisCap, maxPatentCount) + 1 }, (_, patentCount) => ({
+            key: String(patentCount),
+            count: counts.get(patentCount) || 0,
+            label: `${patentCount} patent citations`
+          }));
+          const tailCount = filtered
+            .filter((row) => row.patentCount > axisCap)
+            .reduce((sum, row) => sum + (row.paperCount || 0), 0);
+          if (tailCount > 0) {
+            bars.push({
+              key: `${axisCap + 1}+`,
+              count: tailCount,
+              label: `${axisCap + 1}+ patent citations`
+            });
+          }
+          const x = d3.scaleBand().domain(bars.map((bar) => bar.key)).range([0, innerWidth]).padding(0.18);
+          const maxCount = d3.max(bars, (bar) => bar.count) || 1;
+          const secondLargestCount = d3.max(bars.filter((bar) => bar.count < maxCount), (bar) => bar.count) || 1;
+          const useBrokenAxis = maxCount > secondLargestCount * 6;
+          const topHeight = useBrokenAxis ? 64 : 0;
+          const breakGap = useBrokenAxis ? 34 : 0;
+          const lowerTop = topHeight + breakGap;
+          const lowerHeight = innerHeight - lowerTop;
+          const lowerMax = useBrokenAxis ? secondLargestCount * 1.18 : maxCount * 1.08;
+          const lowerY = d3.scaleLinear().domain([0, lowerMax]).nice().range([lowerHeight, 0]);
+          const topY = d3.scaleLinear()
+            .domain([Math.max(lowerMax, Math.floor(maxCount / 1000) * 1000 - 1000), Math.ceil(maxCount / 1000) * 1000])
+            .range([topHeight, 0]);
+
+          if (useBrokenAxis) {
+            chart.append('g').call(d3.axisLeft(topY).ticks(2).tickFormat((d) => d3.format('~s')(Number(d))));
+            chart.append('g').attr('transform', `translate(0,${lowerTop})`).call(d3.axisLeft(lowerY).ticks(5));
+            chart.append('rect')
+              .attr('x', -8)
+              .attr('y', topHeight + 5)
+              .attr('width', innerWidth + 16)
+              .attr('height', breakGap - 10)
+              .attr('rx', 8)
+              .attr('fill', '#f8fbff');
+            chart.append('line')
+              .attr('x1', 0)
+              .attr('x2', innerWidth)
+              .attr('y1', topHeight + 8)
+              .attr('y2', topHeight + 8)
+              .attr('stroke', '#d8e0ec')
+              .attr('stroke-dasharray', '4 6');
+            chart.append('line')
+              .attr('x1', 0)
+              .attr('x2', innerWidth)
+              .attr('y1', lowerTop - 8)
+              .attr('y2', lowerTop - 8)
+              .attr('stroke', '#d8e0ec')
+              .attr('stroke-dasharray', '4 6');
+            chart.append('g')
+              .attr('class', 'axis-break-glyph')
+              .selectAll('line')
+              .data([-8, 4])
+              .join('line')
+              .attr('x1', (d) => d)
+              .attr('x2', (d) => d + 10)
+              .attr('y1', topHeight + 22)
+              .attr('y2', topHeight + 12)
+              .attr('stroke', '#64748b')
+              .attr('stroke-width', 2)
+              .attr('stroke-linecap', 'round');
+            chart.append('text')
+              .attr('x', innerWidth)
+              .attr('y', topHeight + 23)
+              .attr('text-anchor', 'end')
+              .attr('fill', '#64748b')
+              .attr('font-size', 11)
+              .attr('font-weight', 700)
+              .text('scale break');
+          } else {
+            chart.append('g').call(d3.axisLeft(lowerY).ticks(5));
+          }
+          chart.append('g').attr('transform', `translate(0,${innerHeight})`).call(d3.axisBottom(x));
+          chart.selectAll('rect').data(bars).join('rect')
+            .attr('x', (d) => x(d.key))
+            .attr('y', (d) => lowerTop + lowerY(Math.min(d.count, lowerMax)))
+            .attr('width', x.bandwidth())
+            .attr('height', (d) => lowerHeight - lowerY(Math.min(d.count, lowerMax)))
+            .attr('rx', 5)
+            .attr('fill', 'url(#preview-patent-bar-gradient)')
+            .on('mouseenter', (event, d) => {
+              const lines = [`${d.label}: ${d.count.toLocaleString()} papers`, selectedYear === null ? 'All years' : `Selected year: ${selectedYear}`];
+              setInfo('#histogram-detail', 'Patent citation bin', lines);
+              showPreviewTooltip(event, 'Patent citation bin', lines);
+            })
+            .on('mousemove', (event, d) => showPreviewTooltip(event, 'Patent citation bin', [`${d.label}: ${d.count.toLocaleString()} papers`, selectedYear === null ? 'All years' : `Selected year: ${selectedYear}`]))
+            .on('mouseleave', fadePreviewTooltip);
+
+          if (useBrokenAxis) {
+            const brokenBars = bars.filter((bar) => bar.count > lowerMax);
+            chart.selectAll('rect.upper-bar').data(brokenBars).join('rect')
+              .attr('class', 'upper-bar')
+              .attr('x', (d) => x(d.key))
+              .attr('y', (d) => topY(d.count))
+              .attr('width', x.bandwidth())
+              .attr('height', (d) => topHeight - topY(d.count))
+              .attr('rx', 5)
+              .attr('fill', 'url(#preview-patent-upper-bar-gradient)')
+              .on('mouseenter', (event, d) => {
+                const lines = [`${d.label}: ${d.count.toLocaleString()} papers`, selectedYear === null ? 'All years' : `Selected year: ${selectedYear}`];
+                setInfo('#histogram-detail', 'Patent citation bin', lines);
+                showPreviewTooltip(event, 'Patent citation bin', lines);
+              })
+              .on('mousemove', (event, d) => showPreviewTooltip(event, 'Patent citation bin', [`${d.label}: ${d.count.toLocaleString()} papers`, selectedYear === null ? 'All years' : `Selected year: ${selectedYear}`]))
+              .on('mouseleave', fadePreviewTooltip);
+            chart.selectAll('g.bar-break-mark').data(brokenBars).join('g')
+              .attr('class', 'bar-break-mark')
+              .attr('transform', (d) => `translate(${x(d.key)},${topHeight + breakGap / 2})`)
+              .selectAll('line')
+              .data(() => [0, 1])
+              .join('line')
+              .attr('x1', (_d, index) => x.bandwidth() * 0.28 + index * x.bandwidth() * 0.2)
+              .attr('x2', (_d, index) => x.bandwidth() * 0.43 + index * x.bandwidth() * 0.2)
+              .attr('y1', 5)
+              .attr('y2', -5)
+              .attr('stroke', '#0f766e')
+              .attr('stroke-width', 3)
+              .attr('stroke-linecap', 'round');
+            chart.selectAll('text.upper-value-label').data(brokenBars).join('text')
+              .attr('class', 'upper-value-label')
+              .attr('x', (d) => x(d.key) + x.bandwidth() / 2)
+              .attr('y', (d) => Math.max(12, topY(d.count) - 6))
+              .attr('text-anchor', 'middle')
+              .attr('fill', '#0f172a')
+              .attr('font-size', 12)
+              .attr('font-weight', 700)
+              .text((d) => d.count.toLocaleString());
+          }
+        } else {
+          const bars = d3.bin().domain([0, d3.max(filtered, (row) => row.patentCount) || 1]).thresholds(12)(filtered.map((row) => row.patentCount))
+            .map((bin) => ({
+              x0: bin.x0,
+              x1: bin.x1,
+              count: bin.length,
+              label: `${bin.x0}-${bin.x1} patent citations`
+            }));
+          const x = d3.scaleLinear().domain([0, d3.max(bars, (bar) => bar.x1) || 1]).nice().range([0, innerWidth]);
+          const y = d3.scaleLinear().domain([0, d3.max(bars, (bar) => bar.count) || 1]).nice().range([innerHeight, 0]);
+          chart.append('g').attr('transform', `translate(0,${innerHeight})`).call(d3.axisBottom(x).ticks(6));
+          chart.append('g').call(d3.axisLeft(y).ticks(5));
+          chart.selectAll('rect').data(bars).join('rect')
+            .attr('x', (d) => x(d.x0) + 1)
+            .attr('y', (d) => y(d.count))
+            .attr('width', (d) => Math.max(0, x(d.x1) - x(d.x0) - 2))
+            .attr('height', (d) => innerHeight - y(d.count))
+            .attr('rx', 3)
+            .attr('fill', '#0f766e')
+            .on('mouseenter', (event, d) => {
+              const lines = [`${d.label}: ${d.count.toLocaleString()} papers`, selectedYear === null ? 'All years' : `Selected year: ${selectedYear}`];
+              setInfo('#histogram-detail', 'Patent citation bin', lines);
+              showPreviewTooltip(event, 'Patent citation bin', lines);
+            })
+            .on('mousemove', (event, d) => showPreviewTooltip(event, 'Patent citation bin', [`${d.label}: ${d.count.toLocaleString()} papers`, selectedYear === null ? 'All years' : `Selected year: ${selectedYear}`]))
+            .on('mouseleave', fadePreviewTooltip);
+        }
+      }
+
+      document.querySelector('#zoom-in-network').addEventListener('click', () => {
+        if (networkZoom) d3.select('#paper-network').transition().duration(250).call(networkZoom.scaleBy, 1.25);
+      });
+      document.querySelector('#zoom-out-network').addEventListener('click', () => {
+        if (networkZoom) d3.select('#paper-network').transition().duration(250).call(networkZoom.scaleBy, 0.8);
+      });
+      document.querySelector('#reset-network').addEventListener('click', () => {
+        if (networkZoom) d3.select('#paper-network').transition().duration(350).call(networkZoom.transform, networkDefaultTransform);
+      });
+      document.querySelector('#load-more-paper-network').addEventListener('click', async () => {
+        const button = document.querySelector('#load-more-paper-network');
+        if (!paperNetworkManifest || button.disabled) return;
+        button.disabled = true;
+        button.textContent = 'Loading...';
+        try {
+          const files = [
+            ...(paperNetworkManifest.parts || []),
+            ...(paperNetworkManifest.isolated ? [paperNetworkManifest.isolated] : [])
+          ].map((file) => `data/${file}`);
+          const graph = await loadNetworkFiles(files, '#network-state', 'Paper citation network');
+          paperNetworkLoadedAll = true;
+          applyPaperGraph(graph);
+          setInfo('#network-state', 'Paper Citation Network Loaded', [
+            `Loaded ${paperNodes.length.toLocaleString()} nodes and ${paperLinks.length.toLocaleString()} links.`,
+            'Use filters and pan the canvas to explore the larger graph.'
+          ]);
+        } catch (error) {
+          document.querySelector('#network-state').textContent = `Paper citation network could not load more data. ${error.message || error}`;
+          button.disabled = false;
+          button.textContent = 'Load More Data';
+        }
+      });
+      document.querySelector('#zoom-in-author-network').addEventListener('click', () => {
+        if (authorNetworkZoom) d3.select('#author-network').transition().duration(250).call(authorNetworkZoom.scaleBy, 1.25);
+      });
+      document.querySelector('#zoom-out-author-network').addEventListener('click', () => {
+        if (authorNetworkZoom) d3.select('#author-network').transition().duration(250).call(authorNetworkZoom.scaleBy, 0.8);
+      });
+      document.querySelector('#reset-author-network').addEventListener('click', () => {
+        if (authorNetworkZoom) d3.select('#author-network').transition().duration(350).call(authorNetworkZoom.transform, authorNetworkDefaultTransform);
+      });
+      document.querySelector('#load-more-author-network').addEventListener('click', async () => {
+        const button = document.querySelector('#load-more-author-network');
+        if (!authorNetworkManifest || button.disabled) return;
+        button.disabled = true;
+        button.textContent = 'Loading...';
+        try {
+          document.querySelector('#author-network-state').hidden = false;
+          const files = [
+            ...(authorNetworkManifest.parts || []),
+            ...(authorNetworkManifest.isolated ? [authorNetworkManifest.isolated] : [])
+          ].map((file) => `data/${file}`);
+          const graph = await loadNetworkFiles(files, '#author-network-state', 'Author collaboration network');
+          authorNetworkLoadedAll = true;
+          applyAuthorGraph(graph);
+          setInfo('#author-overview', 'Author Collaboration Network Loaded', [
+            `Loaded ${authorNodes.length.toLocaleString()} nodes and ${authorLinks.length.toLocaleString()} links.`,
+            'Use filters and pan the canvas to explore the larger graph.'
+          ]);
+        } catch (error) {
+          document.querySelector('#author-network-state').hidden = false;
+          document.querySelector('#author-network-state').textContent = `Author collaboration network could not load more data. ${error.message || error}`;
+          button.disabled = false;
+          button.textContent = 'Load More Data';
+        }
+      });
+      document.querySelector('#reset-year').addEventListener('click', () => {
+        selectedYear = null;
+        initTimeline();
+        drawHistogram();
+      });
+      populateSelect('#paper-min-citations', paperCitationOptions, (value) => `${value}+`);
+      populateSelect('#paper-min-degree', paperDegreeOptions, (value) => `${value}+`);
+      populateSelect('#paper-min-patents', paperPatentOptions, (value) => `${value}+`);
+      populateSelect('#paper-min-references', paperReferenceOptions, (value) => `${value}+`);
+      populateSelect('#paper-display-limit', paperDisplayOptions, displayLimitLabel);
+      document.querySelector('#paper-display-limit').value = '500';
+      [
+        '#paper-year-start',
+        '#paper-year-end',
+        '#paper-min-citations',
+        '#paper-min-degree',
+        '#paper-min-patents',
+        '#paper-min-references',
+        '#paper-display-limit',
+        '#paper-hide-isolated'
+      ].forEach((selector) => document.querySelector(selector).addEventListener('change', renderPaperNetwork));
+      populateSelect('#author-min-papers', paperCountOptions, (value) => `${value}+`);
+      populateSelect('#author-min-collaborators', collaboratorCountOptions, (value) => `${value}+`);
+      populateSelect('#author-min-shared', sharedPaperOptions, (value) => `${value}+`);
+      populateSelect('#author-display-limit', displayLimitOptions, displayLimitLabel);
+      [
+        '#author-year-start',
+        '#author-year-end',
+        '#author-min-papers',
+        '#author-min-collaborators',
+        '#author-min-shared',
+        '#author-display-limit'
+      ].forEach((selector) => document.querySelector(selector).addEventListener('change', renderAuthorNetwork));
+
+      initNetwork();
+      initTimeline();
+      initHistogram();
+      initAuthorNetwork();
+
+      async function initAuthorNetwork() {
+        try {
+          document.querySelector('#author-network-state').hidden = false;
+          document.querySelector('#author-network-state').textContent = 'Loading network data...';
+          authorNetworkManifest = await loadFirstJson(['data/author_collaboration_network_manifest.json']).catch(() => null);
+          const graph = await loadFirstJson(['data/author_collaboration_network_top1000.json']);
+          authorNetworkLoadedAll = false;
+          applyAuthorGraph(graph);
+        } catch (error) {
+          document.querySelector('#author-network-state').hidden = false;
+          document.querySelector('#author-network-state').textContent = `Author collaboration JSON could not be loaded. ${error.message || error}`;
+        }
+      }
+
+      function applyAuthorGraph(graph) {
+          authorNodes = (graph.nodes || []).map((node, index) => ({
+            ...node,
+            id: String(node.id || `author-${index + 1}`),
+            name: String(node.name || node.id || `Author ${index + 1}`),
+            paperCount: Number(node.paperCount || node.paper_count || 0),
+            collaborationCount: Number(node.collaborationCount || node.collaborator_count || node.collaboration_count || 0),
+            cluster: node.cluster || node.institution || node.type || 'author'
+          }));
+          authorLinks = (graph.links || graph.edges || []).map((link) => ({
+            ...link,
+            source: String(typeof link.source === 'object' ? link.source.id : link.source || ''),
+            target: String(typeof link.target === 'object' ? link.target.id : link.target || ''),
+            weight: Number(link.weight || link.shared_paper_count || 1),
+            raw: link
+          })).filter((link) => link.source && link.target);
+          authorYearOptions = [...new Set([
+            ...authorNodes.flatMap(itemYears),
+            ...authorLinks.flatMap(itemYears)
+          ])].sort((a, b) => a - b);
+          const yearSelects = ['#author-year-start', '#author-year-end'];
+          yearSelects.forEach((selector) => {
+            const select = document.querySelector(selector);
+            select.disabled = !authorYearOptions.length;
+            select.innerHTML = '<option value="all">All years</option>' + authorYearOptions.map((year) => `<option value="${year}">${year}</option>`).join('');
+          });
+          document.querySelector('#author-year-note').hidden = Boolean(authorYearOptions.length);
+          if (!authorNodes.length) {
+            document.querySelector('#author-network-state').hidden = false;
+            document.querySelector('#author-network-state').textContent = 'Author collaboration data not loaded yet.';
+            return;
+          }
+          document.querySelector('#author-network-state').hidden = true;
+          document.querySelector('#author-network-shell').hidden = false;
+          const loadMoreButton = document.querySelector('#load-more-author-network');
+          loadMoreButton.hidden = !authorNetworkManifest || authorNetworkLoadedAll;
+          loadMoreButton.disabled = false;
+          loadMoreButton.textContent = authorNetworkLoadedAll ? 'All Data Loaded' : 'Load More Data';
+          renderAuthorNetwork();
+      }
+
+      function renderAuthorNetwork() {
+        if (!authorNodes.length) return;
+        const minPaperCount = Number(document.querySelector('#author-min-papers').value || 1);
+        const minCollaboratorCount = Number(document.querySelector('#author-min-collaborators').value || 0);
+        const minSharedPapers = Number(document.querySelector('#author-min-shared').value || 1);
+        const displayLimitValue = document.querySelector('#author-display-limit').value || String(authorDisplayNodeLimit);
+        const displayLimit = displayLimitValue === 'all' ? 'all' : Number(displayLimitValue);
+        const startValue = document.querySelector('#author-year-start').value;
+        const endValue = document.querySelector('#author-year-end').value;
+        const firstYear = authorYearOptions[0] ?? Number.NEGATIVE_INFINITY;
+        const lastYear = authorYearOptions[authorYearOptions.length - 1] ?? Number.POSITIVE_INFINITY;
+        const yearStart = startValue === 'all' ? firstYear : Number(startValue);
+        const yearEnd = endValue === 'all' ? lastYear : Number(endValue);
+        const normalizedStart = Math.min(yearStart, yearEnd);
+        const normalizedEnd = Math.max(yearStart, yearEnd);
+        const yearFilterActive = Boolean(authorYearOptions.length);
+        const eligibleLinks = authorLinks.filter((link) =>
+          Number(link.weight || link.shared_paper_count || 1) >= minSharedPapers &&
+          (!yearFilterActive || overlapsYearRange(itemYears(link), normalizedStart, normalizedEnd))
+        );
+        const linkedIds = new Set();
+        eligibleLinks.forEach((link) => {
+          linkedIds.add(link.source);
+          linkedIds.add(link.target);
+        });
+        const eligibleNodes = authorNodes.filter((node) =>
+          node.paperCount >= minPaperCount &&
+          Number(node.collaborationCount || 0) >= minCollaboratorCount &&
+          (!yearFilterActive || overlapsYearRange(itemYears(node), normalizedStart, normalizedEnd) || linkedIds.has(node.id))
+        );
+        const sortedNodes = [...eligibleNodes].sort((a, b) => b.paperCount - a.paperCount);
+        const nodes = displayLimit === 'all' ? sortedNodes : sortedNodes.slice(0, displayLimit);
+        const visibleIds = new Set(nodes.map((node) => node.id));
+        const links = eligibleLinks.filter((link) =>
+          visibleIds.has(link.source) &&
+          visibleIds.has(link.target)
+        );
+        if (!nodes.length) {
+          document.querySelector('#author-network-shell').hidden = true;
+          document.querySelector('#author-network-state').hidden = false;
+          document.querySelector('#author-network-state').textContent = 'No author collaboration network matches the current controls.';
+          return;
+        }
+        document.querySelector('#author-network-state').hidden = true;
+        document.querySelector('#author-network-shell').hidden = false;
+          setInfo('#author-detail', 'Author or collaboration detail', [
+            `${nodes.length.toLocaleString()} authors currently displayed`,
+            `${links.length.toLocaleString()} collaboration links currently displayed`,
+            'Hover a node or edge to inspect details. Click one to pin the card; click the same item again to unpin. Double-click the network to zoom in.'
+          ]);
+          setInfo('#author-overview', 'Author collaboration overview', [
+            `Loaded ${authorNodes.length.toLocaleString()} nodes and ${authorLinks.length.toLocaleString()} links.`,
+            `${nodes.length.toLocaleString()} authors and ${links.length.toLocaleString()} collaboration links`,
+            `${d3.sum(nodes, (node) => node.paperCount).toLocaleString()} total author-paper contributions`,
+            `Average papers per author: ${(d3.mean(nodes, (node) => node.paperCount) || 0).toFixed(2)}`,
+            `Average shared papers per link: ${(d3.mean(links, (link) => link.weight) || 0).toFixed(2)}`,
+            nodes.length >= staticAuthorLayoutNodeThreshold ? 'Layout mode: static fitted layout for scale.' : 'Layout mode: dynamic force layout.',
+            'Click a node or link to keep its details fixed in the card; click it again or click empty space to unlock it.'
+          ]);
+        drawAuthorNetwork(nodes, links);
+      }
+
+      function drawAuthorNetwork(nodes, links, forceStaticLayout = false) {
+        const shell = document.querySelector('#author-network-shell');
+        const width = Math.max(shell.clientWidth, 640);
+        const height = 540;
+        const canvas = document.querySelector('#author-network');
+        const context = canvas.getContext('2d');
+        const pixelRatio = window.devicePixelRatio || 1;
+        canvas.width = width * pixelRatio;
+        canvas.height = height * pixelRatio;
+        canvas.style.width = `${width}px`;
+        canvas.style.height = `${height}px`;
+        context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+        authorNetworkTransform = d3.zoomIdentity;
+        if (authorNetworkSimulation) authorNetworkSimulation.stop();
+
+        const color = d3.scaleOrdinal(d3.schemeTableau10);
+        const useStaticFullGraphLayout = forceStaticLayout || nodes.length >= staticAuthorLayoutNodeThreshold;
+        const radius = d3.scaleSqrt().domain([0, d3.max(nodes, (d) => d.paperCount) || 1]).range([2.2, 11]);
+        const centerX = width / 2;
+        const centerY = height / 2;
+        nodes.forEach((node, index) => {
+          const group = String(node.cluster || node.institution || 'author');
+          const position = seededScatterPosition(node.id, index, width, height, 1, group);
+          node.x = position.x;
+          node.y = position.y;
+          node.radius = radius(node.paperCount);
+          node.color = color(group);
+        });
+        const nodeById = new Map(nodes.map((node) => [node.id, node]));
+        const linksForCanvas = useStaticFullGraphLayout && links.length > staticAuthorRenderLinkLimit
+          ? [...links].sort((a, b) => Number(b.weight || b.shared_paper_count || 1) - Number(a.weight || a.shared_paper_count || 1)).slice(0, staticAuthorRenderLinkLimit)
+          : links;
+        const visibleLinks = linksForCanvas.map((link) => {
+          const source = nodeById.get(link.source);
+          const target = nodeById.get(link.target);
+          return source && target ? { ...link, source, target } : null;
+        }).filter(Boolean);
+        canvas.dataset.layoutMode = useStaticFullGraphLayout ? 'static' : 'dynamic';
+        let universeBounds = { minX: 0, minY: 0, maxX: width, maxY: height };
+        if (useStaticFullGraphLayout) {
+          const worldRadius = Math.min(width, height) * 1.18;
+          const goldenAngle = Math.PI * (3 - Math.sqrt(5));
+          nodes.forEach((node, index) => {
+            const hash = stableHash(`${node.id}-${index}`);
+            const radiusRatio = Math.sqrt((index + 0.5) / Math.max(nodes.length, 1));
+            const angle = index * goldenAngle + ((hash % 1000) / 1000) * 0.42;
+            const jitter = ((((hash >>> 10) % 1000) / 1000) - 0.5) * worldRadius * 0.026;
+            const nodeRadius = radiusRatio * worldRadius + jitter;
+            node.x = width / 2 + Math.cos(angle) * nodeRadius;
+            node.y = height / 2 + Math.sin(angle) * nodeRadius;
+          });
+          universeBounds = {
+            minX: width / 2 - worldRadius,
+            minY: height / 2 - worldRadius,
+            maxX: width / 2 + worldRadius,
+            maxY: height / 2 + worldRadius
+          };
+        }
+        const importantNodes = new Set([...nodes].sort((a, b) => b.paperCount - a.paperCount).slice(0, 14).map((node) => node.id));
+
+        function draw() {
+          const transform = authorNetworkTransform;
+          context.save();
+          context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+          context.fillStyle = '#ffffff';
+          context.fillRect(0, 0, width, height);
+          context.translate(transform.x, transform.y);
+          context.scale(transform.k, transform.k);
+          context.globalAlpha = transform.k < 0.55 ? 0.12 : 0.28;
+          context.strokeStyle = '#9ca3af';
+          visibleLinks.forEach((link) => {
+            context.lineWidth = Math.max(0.25, Math.min(2.4, Math.sqrt(Number(link.weight || 1)) / 7) / transform.k);
+            context.beginPath();
+            context.moveTo(link.source.x || 0, link.source.y || 0);
+            context.lineTo(link.target.x || 0, link.target.y || 0);
+            context.stroke();
+          });
+          context.globalAlpha = 0.94;
+          nodes.forEach((node) => {
+            context.beginPath();
+            context.arc(node.x || 0, node.y || 0, node.radius, 0, Math.PI * 2);
+            context.fillStyle = node.color;
+            context.fill();
+            context.strokeStyle = 'rgba(255,255,255,0.92)';
+            context.lineWidth = Math.max(0.7, 1.2 / transform.k);
+            context.stroke();
+          });
+          if (transform.k > 1.05) {
+            context.globalAlpha = 0.92;
+            context.fillStyle = '#334155';
+            context.font = `${Math.max(9, 11 / transform.k)}px Inter, sans-serif`;
+            nodes.forEach((node) => {
+              if (!importantNodes.has(node.id)) return;
+              context.fillText(node.name.slice(0, 34), (node.x || 0) + node.radius + 3, (node.y || 0) + 3);
+            });
+          }
+          context.restore();
+        }
+
+        function findNodeAt(x, y) {
+          for (let i = nodes.length - 1; i >= 0; i -= 1) {
+            const node = nodes[i];
+            const dx = x - (node.x || 0);
+            const dy = y - (node.y || 0);
+            if (dx * dx + dy * dy <= Math.max(node.radius + 3, 6) ** 2) return node;
+          }
+          return null;
+        }
+
+        function findItem(event) {
+          const rect = canvas.getBoundingClientRect();
+          const [x, y] = authorNetworkTransform.invert([event.clientX - rect.left, event.clientY - rect.top]);
+          const node = findNodeAt(x, y);
+          if (node) return { type: 'node', node };
+          if (useStaticFullGraphLayout) return null;
+          for (const link of visibleLinks) {
+            const distance = distanceToSegment(x, y, link.source.x || 0, link.source.y || 0, link.target.x || 0, link.target.y || 0);
+            if (distance <= Math.max(5, Math.sqrt(Number(link.weight || 1)) / 2)) return { type: 'link', link };
+          }
+          return null;
+        }
+
+        function setAuthorDetail(item, pinned = false) {
+          if (!item) return;
+          if (item.type === 'node') {
+            setInfo('#author-detail', `${pinned ? 'Pinned: ' : ''}${item.node.name || item.node.id}`, [
+              `Author ID: ${item.node.id}`,
+              `Paper count: ${item.node.paperCount || 0}`,
+              `Collaborator count: ${item.node.collaborationCount || 0}`,
+              item.node.included_shared_paper_count ? `Included shared-paper count: ${item.node.included_shared_paper_count}` : ''
+            ].filter(Boolean));
+            return;
+          }
+          setInfo('#author-detail', `${pinned ? 'Pinned: ' : ''}Collaboration link`, [
+            `Source: ${item.link.source.name}`,
+            `Target: ${item.link.target.name}`,
+            `Shared papers: ${item.link.weight || item.link.shared_paper_count || 1}`
+          ]);
+        }
+
+        function authorItemKey(item) {
+          if (!item) return null;
+          return item.type === 'node'
+            ? `node:${item.node.id}`
+            : `link:${item.link.source.id}:${item.link.target.id}`;
+        }
+
+        authorNetworkZoom = d3.zoom()
+          .scaleExtent([0.15, 10])
+          .filter((event) => event.type === 'dblclick')
+          .on('zoom', (event) => {
+            authorNetworkTransform = event.transform;
+            draw();
+          });
+        d3.select(canvas).call(authorNetworkZoom);
+        if (useStaticFullGraphLayout) {
+          authorNetworkDefaultTransform = centerCroppedTransform(width, height, 2);
+        } else {
+          authorNetworkDefaultTransform = centerCroppedTransform(width, height, 2);
+        }
+        authorNetworkTransform = authorNetworkDefaultTransform;
+        d3.select(canvas).call(authorNetworkZoom.transform, authorNetworkDefaultTransform);
+
+        if (useStaticFullGraphLayout) {
+          authorNetworkSimulation = null;
+          draw();
+        } else {
+          authorNetworkSimulation = d3.forceSimulation(nodes)
+            .force('link', d3.forceLink(visibleLinks).id((d) => d.id).distance((link) => 30 + Math.max(link.source.radius, link.target.radius) * 1.8).strength(0.24))
+            .force('charge', d3.forceManyBody().strength((node) => -20 - node.radius * 3.2).distanceMax(200))
+            .force('center', d3.forceCenter(centerX, centerY))
+            .force('x', d3.forceX(centerX).strength(0.045))
+            .force('y', d3.forceY(centerY).strength(0.045))
+            .force('collision', d3.forceCollide((d) => d.radius + 2.1).strength(0.48))
+            .alpha(1)
+            .alphaDecay(useStaticFullGraphLayout ? 0.08 : 0.045)
+            .velocityDecay(0.48)
+            .on('tick', draw)
+            .on('end', draw);
+        }
+
+        d3.select(canvas).call(d3.drag()
+          .filter((event) => !event.button)
+          .subject((event) => {
+            const [x, y] = authorNetworkTransform.invert(d3.pointer(event, canvas));
+            const node = !useStaticFullGraphLayout
+              ? authorNetworkSimulation?.find(x, y, 24 / authorNetworkTransform.k) || findNodeAt(x, y)
+              : null;
+            if (node) return node;
+            return {
+              isPanSubject: true,
+              startX: event.sourceEvent.clientX,
+              startY: event.sourceEvent.clientY,
+              startTransform: authorNetworkTransform
+            };
+          })
+          .on('start', (event) => {
+            if (!event.subject) return;
+            if (event.subject.isPanSubject) {
+              canvas.style.cursor = 'grabbing';
+              return;
+            }
+            if (authorNetworkSimulation && !event.active) authorNetworkSimulation.alphaTarget(0.22).restart();
+            event.subject.fx = event.subject.x;
+            event.subject.fy = event.subject.y;
+          })
+          .on('drag', (event) => {
+            if (!event.subject) return;
+            if (event.subject.isPanSubject) {
+              const dx = event.sourceEvent.clientX - event.subject.startX;
+              const dy = event.sourceEvent.clientY - event.subject.startY;
+              const nextTransform = d3.zoomIdentity
+                .translate(event.subject.startTransform.x + dx, event.subject.startTransform.y + dy)
+                .scale(event.subject.startTransform.k);
+              d3.select(canvas).call(authorNetworkZoom.transform, nextTransform);
+              return;
+            }
+            const [x, y] = authorNetworkTransform.invert(d3.pointer(event, canvas));
+            event.subject.x = x;
+            event.subject.y = y;
+            event.subject.fx = x;
+            event.subject.fy = y;
+            draw();
+          })
+          .on('end', (event) => {
+            if (!event.subject) return;
+            if (event.subject.isPanSubject) {
+              canvas.style.cursor = 'grab';
+              return;
+            }
+            if (authorNetworkSimulation && !event.active) {
+              authorNetworkSimulation.alpha(0.32).alphaTarget(0).restart();
+            }
+            event.subject.fx = null;
+            event.subject.fy = null;
+          }));
+
+        canvas.onpointermove = (event) => {
+          const item = findItem(event);
+          if (!item) {
+            canvas.style.cursor = 'grab';
+            fadePreviewTooltip();
+            return;
+          }
+          canvas.style.cursor = 'pointer';
+          if (item.type === 'node') {
+            showPreviewTooltip(event, item.node.name || item.node.id, [
+              `Author ID: ${item.node.id}`,
+              `Paper count: ${item.node.paperCount || 0}`,
+              `Collaborator count: ${item.node.collaborationCount || 0}`,
+              item.node.included_shared_paper_count ? `Included shared-paper count: ${item.node.included_shared_paper_count}` : ''
+            ].filter(Boolean));
+          } else {
+            showPreviewTooltip(event, 'Collaboration link', [
+              `Source: ${item.link.source.name}`,
+              `Target: ${item.link.target.name}`,
+              `Shared papers: ${item.link.weight || item.link.shared_paper_count || 1}`
+            ]);
+          }
+          if (!authorDetailPinned) setAuthorDetail(item);
+        };
+        canvas.onpointerleave = fadePreviewTooltip;
+        canvas.onclick = (event) => {
+          const item = findItem(event);
+          const itemKey = authorItemKey(item);
+          if (itemKey && authorPinnedKey === itemKey) {
+            authorDetailPinned = false;
+            authorPinnedKey = null;
+            setInfo('#author-detail', 'Author or collaboration detail', [
+              `${nodes.length.toLocaleString()} authors currently displayed`,
+              `${links.length.toLocaleString()} collaboration links currently displayed`,
+              'Hover a node or edge to show details here. Click one to keep the details fixed; click it again to unpin.'
+            ]);
+            return;
+          }
+          authorDetailPinned = Boolean(item);
+          authorPinnedKey = itemKey;
+          if (item) {
+            setAuthorDetail(item, true);
+            return;
+          }
+          setInfo('#author-detail', 'Author or collaboration detail', [
+            `${nodes.length.toLocaleString()} authors currently displayed`,
+            `${links.length.toLocaleString()} collaboration links currently displayed`,
+            'Hover a node or edge to show details here. Click one to keep the details fixed; click it again to unpin.'
+          ]);
+        };
+        draw();
+      }
+    </script>
   </body>
 </html>
