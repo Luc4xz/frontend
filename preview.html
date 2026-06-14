@@ -960,8 +960,8 @@
         barGradient.append('stop').attr('offset', '0%').attr('stop-color', '#22d3ee');
         barGradient.append('stop').attr('offset', '100%').attr('stop-color', '#0f766e');
         const upperBarGradient = defs.append('linearGradient').attr('id', 'preview-patent-upper-bar-gradient').attr('x1', '0').attr('x2', '0').attr('y1', '0').attr('y2', '1');
-        upperBarGradient.append('stop').attr('offset', '0%').attr('stop-color', '#e0f7ff');
-        upperBarGradient.append('stop').attr('offset', '100%').attr('stop-color', '#67e8f9');
+        upperBarGradient.append('stop').attr('offset', '0%').attr('stop-color', '#8bdff0');
+        upperBarGradient.append('stop').attr('offset', '100%').attr('stop-color', '#2dd4bf');
         const topRoundedBarPath = (xValue, yValue, widthValue, heightValue, radiusValue) => {
           const radius = Math.min(radiusValue, widthValue / 2, Math.max(heightValue, 0));
           const bottom = yValue + Math.max(heightValue, 0);
@@ -1090,7 +1090,7 @@
               .attr('class', 'upper-bar')
               .attr('d', (d) => topRoundedBarPath(x(d.key), topY(d.count), x.bandwidth(), topHeight - topY(d.count), 9))
               .attr('fill', 'url(#preview-patent-upper-bar-gradient)')
-              .attr('opacity', 0.64)
+              .attr('opacity', 0.78)
               .on('mouseenter', (event, d) => {
                 const lines = [`${d.label}: ${d.count.toLocaleString()} papers`, selectedYear === null ? 'All years' : `Selected year: ${selectedYear}`];
                 setInfo('#histogram-detail', 'Patent citation bin', lines);
@@ -1108,7 +1108,7 @@
               .attr('x2', (_d, index) => x.bandwidth() * 0.43 + index * x.bandwidth() * 0.2)
               .attr('y1', 5)
               .attr('y2', -5)
-              .attr('stroke', '#67e8f9')
+              .attr('stroke', '#2dd4bf')
               .attr('stroke-width', 2)
               .attr('stroke-linecap', 'round');
             chart.selectAll('text.upper-value-label').data(brokenBars).join('text')

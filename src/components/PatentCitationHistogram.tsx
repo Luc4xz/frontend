@@ -162,8 +162,8 @@ export function PatentCitationHistogram({ papers, selectedYear, onResetYear, loa
     barGradient.append('stop').attr('offset', '0%').attr('stop-color', '#22d3ee');
     barGradient.append('stop').attr('offset', '100%').attr('stop-color', '#0f766e');
     const upperBarGradient = defs.append('linearGradient').attr('id', 'patent-upper-bar-gradient').attr('x1', '0').attr('x2', '0').attr('y1', '0').attr('y2', '1');
-    upperBarGradient.append('stop').attr('offset', '0%').attr('stop-color', '#e0f7ff');
-    upperBarGradient.append('stop').attr('offset', '100%').attr('stop-color', '#67e8f9');
+    upperBarGradient.append('stop').attr('offset', '0%').attr('stop-color', '#8bdff0');
+    upperBarGradient.append('stop').attr('offset', '100%').attr('stop-color', '#2dd4bf');
     const topRoundedBarPath = (xValue: number, yValue: number, widthValue: number, heightValue: number, radiusValue: number) => {
       const radius = Math.min(radiusValue, widthValue / 2, Math.max(heightValue, 0));
       const bottom = yValue + Math.max(heightValue, 0);
@@ -288,7 +288,7 @@ export function PatentCitationHistogram({ papers, selectedYear, onResetYear, loa
           .attr('class', 'upper-bar')
           .attr('d', (d) => topRoundedBarPath(x(d.key) ?? 0, topY(d.count), x.bandwidth(), topHeight - topY(d.count), 9))
           .attr('fill', 'url(#patent-upper-bar-gradient)')
-          .attr('opacity', 0.64)
+          .attr('opacity', 0.78)
           .on('mouseenter', (event: MouseEvent, d) => {
             describeAggregatedBar(d.label, d.count);
             const totalPapers = d3.sum(filtered, (paper) => paper.paperCount ?? 0);
@@ -314,7 +314,7 @@ export function PatentCitationHistogram({ papers, selectedYear, onResetYear, loa
           .attr('x2', (_d, index) => x.bandwidth() * 0.43 + index * x.bandwidth() * 0.2)
           .attr('y1', 5)
           .attr('y2', -5)
-          .attr('stroke', '#67e8f9')
+          .attr('stroke', '#2dd4bf')
           .attr('stroke-width', 2)
           .attr('stroke-linecap', 'round');
         chart
