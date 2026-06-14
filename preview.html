@@ -12,7 +12,7 @@
         <div>
           <p class="eyebrow">UW-Madison Computer Science</p>
           <h1>Research Network Dashboard</h1>
-          <p class="subtext">Static preview reads prepared JSON files from the repository root first, then public/data/processed/.</p>
+          <p class="subtext">Static preview reads prepared JSON files from the repository root.</p>
         </div>
       </header>
 
@@ -232,7 +232,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
     <script>
-      const dataBase = 'public/data/processed/';
+      const dataBase = '';
       let selectedYear = null;
       let patentRows = [];
       let patentRowsAreAggregated = false;
@@ -269,7 +269,7 @@
       const displayLimitOptions = [250, 500, 1000, 2000, 5000, 'all'];
 
       async function loadJson(name) {
-        return loadFirstJson([dataBase + name]);
+        return loadFirstJson([name]);
       }
 
       async function loadFirstJson(paths) {
@@ -417,7 +417,7 @@
 
       async function initNetwork() {
         try {
-          const graph = await loadFirstJson(['paper_citation_network_2019_2024.json', dataBase + 'paper_citation_network_top.json']);
+          const graph = await loadFirstJson(['paper_citation_network_2019_2024.json']);
           paperNodes = (graph.nodes || []).map((node) => ({
             ...node,
             id: String(node.id),
@@ -758,7 +758,7 @@
             }
           } catch {}
           if (!data) {
-            data = await loadJson('paper_growth_timeline.json');
+            data = await loadFirstJson(['paper_growth_10yr.json']);
           }
           if (!data.length) {
             document.querySelector('#timeline-state').textContent = 'Prepared paper growth JSON is empty. Add raw data and rerun the preprocessing script.';
@@ -876,8 +876,7 @@
               }));
               patentRowsAreAggregated = true;
             } else {
-              patentRows = await loadJson('patent_citation_records.json');
-              patentRowsAreAggregated = patentRows.some((row) => row.paperCount !== undefined);
+              throw new Error('patent_count_distribution.json did not contain histogram, by_year, or years data.');
             }
           }
           if (!patentRows.length) {
@@ -1153,7 +1152,7 @@
 
       async function initAuthorNetwork() {
         try {
-          const graph = await loadFirstJson(['uw_madison_5yr_author_collaboration_network_web.json', dataBase + 'author_collaboration_network_top.json']);
+          const graph = await loadFirstJson(['uw_madison_5yr_author_collaboration_network_web.json']);
           authorNodes = (graph.nodes || []).map((node, index) => ({
             ...node,
             id: String(node.id || `author-${index + 1}`),
