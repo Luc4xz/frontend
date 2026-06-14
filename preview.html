@@ -348,16 +348,15 @@
       }
 
       function seededScatterPosition(id, index, width, height, spread = 1, group = 'network') {
-        const angle = seededUnit(id, 'angle') * Math.PI * 2;
-        const radius = Math.sqrt(seededUnit(id, 'radius')) * Math.min(width, height) * 0.46 * spread;
-        const wobbleX = (seededUnit(id, 'wobble-x') - 0.5) * Math.min(width, height) * 0.18 * spread;
-        const wobbleY = (seededUnit(id, 'wobble-y') - 0.5) * Math.min(width, height) * 0.18 * spread;
-        const groupAngle = seededUnit(group, 'group-angle') * Math.PI * 2;
-        const groupRadius = Math.sqrt(seededUnit(group, 'group-radius')) * Math.min(width, height) * 0.16 * spread;
-        const rowOffset = ((index % 9) - 4) * 1.7;
+        const groupX = 0.18 + seededUnit(group, 'group-x') * 0.64;
+        const groupY = 0.18 + seededUnit(group, 'group-y') * 0.64;
+        const xNoise = (seededUnit(id, 'x') - 0.5) * 0.92 * spread;
+        const yNoise = (seededUnit(id, 'y') - 0.5) * 0.92 * spread;
+        const skew = (seededUnit(`${id}-${index}`, 'skew') - 0.5) * 0.16 * spread;
+        const wave = Math.sin((index * 0.73 + seededUnit(group, 'wave') * 6.28)) * 0.045 * spread;
         return {
-          x: width / 2 + Math.cos(groupAngle) * groupRadius + Math.cos(angle) * radius + wobbleX + rowOffset,
-          y: height / 2 + Math.sin(groupAngle) * groupRadius * 0.74 + Math.sin(angle) * radius * 0.74 + wobbleY - rowOffset
+          x: width * Math.max(0.04, Math.min(0.96, groupX + xNoise * 0.52 + skew)),
+          y: height * Math.max(0.06, Math.min(0.94, groupY + yNoise * 0.48 + wave - skew * 0.35))
         };
       }
 
@@ -463,7 +462,7 @@
         setInfo('#network-state', 'Paper Citation Network Overview', [
           `${visibleNodes.length.toLocaleString()} papers displayed`,
           `${links.length.toLocaleString()} citation links displayed`,
-          visibleNodes.length > 2000 ? 'Layout mode: force layout rendered first, then frozen for scale.' : 'Layout mode: dynamic force layout.',
+          'Layout mode: precomputed static layout.',
           'Hover a node or edge to inspect details. Click a node to keep its details fixed; click the same node again to unpin. Double-click the network to zoom in.'
         ]);
         drawNetwork(visibleNodes, links);
@@ -486,7 +485,7 @@
 
         networkZoom = d3.zoom()
           .scaleExtent([0.15, 10])
-          .filter((event) => event.type === 'wheel' || event.type === 'dblclick')
+          .filter((event) => event.type === 'dblclick')
           .on('zoom', (event) => {
             networkTransform = event.transform;
             draw();
@@ -508,6 +507,8 @@
           node.color = color(group);
           node.x = position.x;
           node.y = position.y;
+          node.anchorX = position.x;
+          node.anchorY = position.y;
         });
         const nodeById = new Map(nodes.map((node) => [node.id, node]));
         const visibleLinks = links
@@ -518,7 +519,7 @@
           })
           .filter(Boolean);
         const useStaticPaperLayout = forceStaticLayout || nodes.length > 2000;
-        canvas.dataset.layoutMode = useStaticPaperLayout ? 'static' : 'dynamic';
+        canvas.dataset.layoutMode = 'static';
 
         function draw() {
           const transform = networkTransform;
@@ -588,31 +589,20 @@
 
         networkSimulation = d3.forceSimulation(nodes)
             .force('link', d3.forceLink(visibleLinks).id((d) => d.id).distance((link) => 28 + Math.max(link.source.radius, link.target.radius) * 1.8).strength(0.24))
-            .force('charge', d3.forceManyBody().strength((node) => -18 - node.radius * 3.2).distanceMax(190))
+            .force('charge', d3.forceManyBody().strength((node) => -14 - node.radius * 2.8).distanceMax(150))
             .force('center', d3.forceCenter(width / 2, height / 2))
-            .force('x', d3.forceX(width / 2).strength(0.045))
-            .force('y', d3.forceY(height / 2).strength(0.045))
+            .force('x', d3.forceX((node) => node.anchorX).strength(0.025))
+            .force('y', d3.forceY((node) => node.anchorY).strength(0.025))
             .force('collision', d3.forceCollide((d) => d.radius + 2.1).strength(0.48))
-            .alpha(1)
-            .alphaDecay(useStaticPaperLayout ? 0.035 : 0.045)
-            .velocityDecay(0.48)
-            .on('tick', draw)
-            .on('end', draw);
-        if (useStaticPaperLayout) {
-          window.setTimeout(() => {
-            networkSimulation?.stop();
-            networkSimulation = null;
-            draw();
-          }, 4500);
-        }
+            .stop();
+        networkSimulation.tick(useStaticPaperLayout ? 220 : 120);
+        networkSimulation = null;
+        draw();
 
         d3.select(canvas).call(d3.drag()
           .filter((event) => !event.button)
           .subject((event) => {
-            const [x, y] = networkTransform.invert(d3.pointer(event, canvas));
-            const node = !useStaticPaperLayout
-              ? networkSimulation?.find(x, y, 24 / networkTransform.k) || findNode({ clientX: event.sourceEvent.clientX, clientY: event.sourceEvent.clientY })
-              : null;
+            const node = findNode({ clientX: event.sourceEvent.clientX, clientY: event.sourceEvent.clientY });
             if (node) return node;
             return {
               isPanSubject: true,
@@ -627,7 +617,6 @@
               canvas.style.cursor = 'grabbing';
               return;
             }
-            if (networkSimulation && !event.active) networkSimulation.alphaTarget(0.22).restart();
             event.subject.fx = event.subject.x;
             event.subject.fy = event.subject.y;
           })
@@ -654,9 +643,6 @@
             if (event.subject.isPanSubject) {
               canvas.style.cursor = 'grab';
               return;
-            }
-            if (networkSimulation && !event.active) {
-              networkSimulation.alpha(0.32).alphaTarget(0).restart();
             }
             event.subject.fx = null;
             event.subject.fy = null;
@@ -1393,7 +1379,7 @@
 
         authorNetworkZoom = d3.zoom()
           .scaleExtent([0.15, 10])
-          .filter((event) => event.type === 'wheel' || event.type === 'dblclick')
+          .filter((event) => event.type === 'dblclick')
           .on('zoom', (event) => {
             authorNetworkTransform = event.transform;
             draw();
