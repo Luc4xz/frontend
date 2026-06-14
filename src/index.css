@@ -165,7 +165,9 @@ button.secondary:hover:not(:disabled) {
 }
 
 .panel-card {
-  padding: 22px;
+  border-radius: 12px;
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.08);
+  padding: 18px;
 }
 
 .wide-panel {
@@ -177,35 +179,35 @@ button.secondary:hover:not(:disabled) {
   display: flex;
   gap: 16px;
   justify-content: space-between;
-  margin-bottom: 18px;
+  margin-bottom: 14px;
 }
 
 .panel-header h2,
 .strategy-panel h2 {
   color: #0b1f3a;
-  font-size: 1.28rem;
+  font-size: 1.12rem;
   line-height: 1.25;
   margin: 0;
 }
 
 .panel-subtitle {
   color: #5f6f82;
-  font-size: 0.95rem;
-  margin: 7px 0 0;
+  font-size: 0.88rem;
+  margin: 5px 0 0;
 }
 
 .info-panel {
-  background: #f8fafc;
-  border: 1px solid #d8e0ec;
-  border-radius: 8px;
+  background: linear-gradient(180deg, #ffffff, #f8fbff);
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
   color: #334155;
   display: grid;
-  gap: 4px;
-  margin-bottom: 14px;
+  gap: 3px;
+  margin-bottom: 12px;
   align-content: start;
-  min-height: 118px;
+  min-height: 88px;
   overflow: visible;
-  padding: 12px 14px;
+  padding: 10px 12px;
 }
 
 .info-card-grid {
@@ -221,15 +223,15 @@ button.secondary:hover:not(:disabled) {
 
 .section-info-stack {
   display: grid;
-  gap: 10px;
+  gap: 8px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  margin-bottom: 14px;
+  margin-bottom: 12px;
 }
 
 .section-info-stack .info-panel {
-  height: 210px;
+  height: 116px;
   margin-bottom: 0;
-  overflow: visible;
+  overflow: hidden;
 }
 
 .paired-dashboard > .panel-card > .info-panel,
@@ -239,18 +241,19 @@ button.secondary:hover:not(:disabled) {
 }
 
 .detail-panel {
-  background: #eef7f5;
-  border-color: #b8d9d4;
+  background: linear-gradient(180deg, #f7fffd, #effaf8);
+  border-color: #cce9e4;
 }
 
 .info-panel strong {
   color: #0b1f3a;
-  font-size: 0.95rem;
+  font-size: 0.86rem;
 }
 
 .info-panel span {
   color: #526173;
-  font-size: 0.88rem;
+  font-size: 0.78rem;
+  line-height: 1.35;
 }
 
 .network-actions {
@@ -317,9 +320,10 @@ button.secondary:hover:not(:disabled) {
 }
 
 .chart-shell {
-  background: #f8fbff;
-  border: 1px solid #d8e0ec;
-  border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
   min-height: 540px;
   overflow: hidden;
   position: relative;
@@ -336,7 +340,7 @@ button.secondary:hover:not(:disabled) {
 }
 
 .compact-chart {
-  min-height: 380px;
+  min-height: 330px;
 }
 
 .network-svg,
@@ -573,9 +577,36 @@ button.secondary:hover:not(:disabled) {
 }
 
 .axis-label {
-  fill: #475569;
-  font-size: 0.82rem;
+  fill: #64748b;
+  font-size: 0.72rem;
   font-weight: 700;
+}
+
+.chart-axis path,
+.chart-axis line {
+  stroke: #dbe4ef;
+}
+
+.chart-axis text {
+  fill: #64748b;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.chart-grid line {
+  stroke: #edf2f7;
+  stroke-dasharray: 3 6;
+}
+
+.chart-grid path {
+  display: none;
+}
+
+.chart-value-label {
+  fill: #334155;
+  font-size: 10px;
+  font-weight: 750;
+  pointer-events: none;
 }
 
 .legend-card {

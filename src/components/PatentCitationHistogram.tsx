@@ -119,8 +119,8 @@ export function PatentCitationHistogram({ papers, selectedYear, onResetYear, loa
     if (!svgElement || !wrapper || !filtered.length) return;
 
     const width = Math.max(wrapper.clientWidth, 520);
-    const height = 360;
-    const margin = { top: 24, right: 22, bottom: 58, left: 64 };
+    const height = 330;
+    const margin = { top: 30, right: 28, bottom: 52, left: 62 };
     const innerWidth = width - margin.left - margin.right;
     const innerHeight = height - margin.top - margin.bottom;
     const svg = d3.select(svgElement);
@@ -159,19 +159,19 @@ export function PatentCitationHistogram({ papers, selectedYear, onResetYear, loa
     const chart = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
     const defs = svg.append('defs');
     const barGradient = defs.append('linearGradient').attr('id', 'patent-bar-gradient').attr('x1', '0').attr('x2', '0').attr('y1', '0').attr('y2', '1');
-    barGradient.append('stop').attr('offset', '0%').attr('stop-color', '#149b91');
+    barGradient.append('stop').attr('offset', '0%').attr('stop-color', '#22d3ee');
     barGradient.append('stop').attr('offset', '100%').attr('stop-color', '#0f766e');
     const upperBarGradient = defs.append('linearGradient').attr('id', 'patent-upper-bar-gradient').attr('x1', '0').attr('x2', '0').attr('y1', '0').attr('y2', '1');
-    upperBarGradient.append('stop').attr('offset', '0%').attr('stop-color', '#0f766e');
-    upperBarGradient.append('stop').attr('offset', '100%').attr('stop-color', '#0b5f59');
+    upperBarGradient.append('stop').attr('offset', '0%').attr('stop-color', '#38bdf8');
+    upperBarGradient.append('stop').attr('offset', '100%').attr('stop-color', '#0f766e');
 
     if (isAggregatedDistribution) {
-      const x = d3.scaleBand().domain(aggregatedCategories.map((bar) => bar.key)).range([0, innerWidth]).padding(0.18);
+      const x = d3.scaleBand().domain(aggregatedCategories.map((bar) => bar.key)).range([0, innerWidth]).padding(0.28);
       const maxCount = d3.max(aggregatedCategories, (bar) => bar.count) || 1;
       const secondLargestCount = d3.max(aggregatedCategories.filter((bar) => bar.count < maxCount), (bar) => bar.count) || 1;
       const useBrokenAxis = maxCount > secondLargestCount * 6;
-      const topHeight = useBrokenAxis ? 64 : 0;
-      const breakGap = useBrokenAxis ? 34 : 0;
+      const topHeight = useBrokenAxis ? 56 : 0;
+      const breakGap = useBrokenAxis ? 28 : 0;
       const lowerTop = topHeight + breakGap;
       const lowerHeight = innerHeight - lowerTop;
       const lowerMax = useBrokenAxis ? secondLargestCount * 1.18 : maxCount * 1.08;
@@ -181,29 +181,31 @@ export function PatentCitationHistogram({ papers, selectedYear, onResetYear, loa
         .range([topHeight, 0]);
 
       if (useBrokenAxis) {
-        chart.append('g').call(d3.axisLeft(topY).ticks(2).tickFormat((d) => d3.format('~s')(Number(d))));
-        chart.append('g').attr('transform', `translate(0,${lowerTop})`).call(d3.axisLeft(lowerY).ticks(5));
+        chart.append('g').attr('class', 'chart-grid').attr('transform', `translate(0,${lowerTop})`).call(d3.axisLeft(lowerY).ticks(4).tickSize(-innerWidth).tickFormat(() => ''));
+        chart.append('g').attr('class', 'chart-axis').call(d3.axisLeft(topY).ticks(2).tickFormat((d) => d3.format('~s')(Number(d))));
+        chart.append('g').attr('class', 'chart-axis').attr('transform', `translate(0,${lowerTop})`).call(d3.axisLeft(lowerY).ticks(4).tickFormat((d) => d3.format('~s')(Number(d))));
         chart.append('rect')
           .attr('x', -8)
-          .attr('y', topHeight + 5)
+          .attr('y', topHeight + 4)
           .attr('width', innerWidth + 16)
-          .attr('height', breakGap - 10)
-          .attr('rx', 8)
-          .attr('fill', '#f8fbff');
+          .attr('height', breakGap - 8)
+          .attr('rx', 10)
+          .attr('fill', '#ffffff')
+          .attr('opacity', 0.9);
         chart.append('line')
           .attr('x1', 0)
           .attr('x2', innerWidth)
           .attr('y1', topHeight + 8)
           .attr('y2', topHeight + 8)
-          .attr('stroke', '#d8e0ec')
-          .attr('stroke-dasharray', '4 6');
+          .attr('stroke', '#dbeafe')
+          .attr('stroke-dasharray', '2 8');
         chart.append('line')
           .attr('x1', 0)
           .attr('x2', innerWidth)
           .attr('y1', lowerTop - 8)
           .attr('y2', lowerTop - 8)
-          .attr('stroke', '#d8e0ec')
-          .attr('stroke-dasharray', '4 6');
+          .attr('stroke', '#dbeafe')
+          .attr('stroke-dasharray', '2 8');
         chart.append('g')
           .attr('class', 'axis-break-glyph')
           .selectAll('line')
@@ -213,8 +215,8 @@ export function PatentCitationHistogram({ papers, selectedYear, onResetYear, loa
           .attr('x2', (d) => d + 10)
           .attr('y1', topHeight + 22)
           .attr('y2', topHeight + 12)
-          .attr('stroke', '#64748b')
-          .attr('stroke-width', 2)
+          .attr('stroke', '#38bdf8')
+          .attr('stroke-width', 1.7)
           .attr('stroke-linecap', 'round');
         chart.append('text')
           .attr('x', innerWidth)
@@ -222,22 +224,26 @@ export function PatentCitationHistogram({ papers, selectedYear, onResetYear, loa
           .attr('text-anchor', 'end')
           .attr('fill', '#64748b')
           .attr('font-size', 11)
-          .attr('font-weight', 700)
-          .text('scale break');
+          .attr('font-weight', 650)
+          .text('axis break');
       } else {
-        chart.append('g').call(d3.axisLeft(lowerY).ticks(5));
+        chart.append('g').attr('class', 'chart-grid').call(d3.axisLeft(lowerY).ticks(5).tickSize(-innerWidth).tickFormat(() => ''));
+        chart.append('g').attr('class', 'chart-axis').call(d3.axisLeft(lowerY).ticks(5).tickFormat((d) => d3.format('~s')(Number(d))));
       }
-      chart.append('g').attr('transform', `translate(0,${innerHeight})`).call(d3.axisBottom(x));
+      chart.append('g').attr('class', 'chart-axis').attr('transform', `translate(0,${innerHeight})`).call(d3.axisBottom(x));
       chart
-        .selectAll('rect')
+        .selectAll('rect.patent-bar')
         .data(aggregatedCategories)
         .join('rect')
+        .attr('class', 'patent-bar')
         .attr('x', (d) => x(d.key) ?? 0)
         .attr('y', (d) => lowerTop + lowerY(Math.min(d.count, lowerMax)))
         .attr('width', x.bandwidth())
         .attr('height', (d) => lowerHeight - lowerY(Math.min(d.count, lowerMax)))
-        .attr('rx', 5)
+        .attr('rx', Math.min(9, x.bandwidth() / 2))
+        .attr('ry', Math.min(9, x.bandwidth() / 2))
         .attr('fill', 'url(#patent-bar-gradient)')
+        .attr('opacity', 0.96)
         .on('mouseenter', (event: MouseEvent, d) => {
           describeAggregatedBar(d.label, d.count);
           const totalPapers = d3.sum(filtered, (paper) => paper.paperCount ?? 0);
@@ -251,6 +257,16 @@ export function PatentCitationHistogram({ papers, selectedYear, onResetYear, loa
         })
         .on('mouseleave', fadeTooltip);
 
+      chart
+        .selectAll('text.patent-value-label')
+        .data(aggregatedCategories.filter((bar) => !useBrokenAxis || bar.count <= lowerMax))
+        .join('text')
+        .attr('class', 'chart-value-label patent-value-label')
+        .attr('x', (d) => (x(d.key) ?? 0) + x.bandwidth() / 2)
+        .attr('y', (d) => lowerTop + lowerY(d.count) - 7)
+        .attr('text-anchor', 'middle')
+        .text((d) => d.count > 0 ? d3.format('~s')(d.count) : '');
+
       if (useBrokenAxis) {
         const brokenBars = aggregatedCategories.filter((bar) => bar.count > lowerMax);
         chart
@@ -262,7 +278,8 @@ export function PatentCitationHistogram({ papers, selectedYear, onResetYear, loa
           .attr('y', (d) => topY(d.count))
           .attr('width', x.bandwidth())
           .attr('height', (d) => topHeight - topY(d.count))
-          .attr('rx', 5)
+          .attr('rx', Math.min(9, x.bandwidth() / 2))
+          .attr('ry', Math.min(9, x.bandwidth() / 2))
           .attr('fill', 'url(#patent-upper-bar-gradient)')
           .on('mouseenter', (event: MouseEvent, d) => {
             describeAggregatedBar(d.label, d.count);
@@ -301,26 +318,29 @@ export function PatentCitationHistogram({ papers, selectedYear, onResetYear, loa
           .attr('y', (d) => Math.max(12, topY(d.count) - 6))
           .attr('text-anchor', 'middle')
           .attr('fill', '#0f172a')
-          .attr('font-size', 12)
-          .attr('font-weight', 700)
-          .text((d) => d.count.toLocaleString());
+          .attr('font-size', 11)
+          .attr('font-weight', 750)
+          .text((d) => d3.format('~s')(d.count));
       }
     } else {
       const maxValue = d3.max(bars, (bar) => bar.x1) || 1;
       const x = d3.scaleLinear().domain([0, maxValue]).nice().range([0, innerWidth]);
       const y = d3.scaleLinear().domain([0, d3.max(bars, (bar) => bar.count) || 1]).nice().range([innerHeight, 0]);
-      chart.append('g').attr('transform', `translate(0,${innerHeight})`).call(d3.axisBottom(x).ticks(6));
-      chart.append('g').call(d3.axisLeft(y).ticks(5));
+      chart.append('g').attr('class', 'chart-grid').call(d3.axisLeft(y).ticks(5).tickSize(-innerWidth).tickFormat(() => ''));
+      chart.append('g').attr('class', 'chart-axis').attr('transform', `translate(0,${innerHeight})`).call(d3.axisBottom(x).ticks(6));
+      chart.append('g').attr('class', 'chart-axis').call(d3.axisLeft(y).ticks(5).tickFormat((d) => d3.format('~s')(Number(d))));
       chart
-        .selectAll('rect')
+        .selectAll('rect.patent-bar')
         .data(bars)
         .join('rect')
+        .attr('class', 'patent-bar')
         .attr('x', (d) => x(d.x0 ?? 0) + 1)
         .attr('y', (d) => y(d.count))
         .attr('width', (d) => Math.max(0, x(d.x1 ?? 0) - x(d.x0 ?? 0) - 2))
         .attr('height', (d) => innerHeight - y(d.count))
-        .attr('rx', 3)
-        .attr('fill', '#0f766e')
+        .attr('rx', 8)
+        .attr('ry', 8)
+        .attr('fill', 'url(#patent-bar-gradient)')
         .on('mouseenter', (event: MouseEvent, d) => {
           describeHistogramBar(d.label, d.count);
           const share = filtered.length > 0 ? (d.count / filtered.length) * 100 : 0;

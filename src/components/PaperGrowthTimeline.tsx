@@ -26,7 +26,7 @@ interface FloatingTooltip {
 export function PaperGrowthTimeline({ data, selectedYear, onSelectYear, loading, error }: PaperGrowthTimelineProps) {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const wrapperRef = useRef<HTMLDivElement | null>(null);
-  const [barDetail, setBarDetail] = useState<DetailCard | null>(null);
+  const [yearDetail, setYearDetail] = useState<DetailCard | null>(null);
   const [tooltip, setTooltip] = useState<FloatingTooltip | null>(null);
   const tooltipTimerRef = useRef<number | null>(null);
   const [resizeTick, setResizeTick] = useState(0);
@@ -74,42 +74,75 @@ export function PaperGrowthTimeline({ data, selectedYear, onSelectYear, loading,
     if (!svgElement || !wrapper || !data.length) return;
 
     const width = Math.max(wrapper.clientWidth, 520);
-    const height = 360;
-    const margin = { top: 24, right: 22, bottom: 58, left: 64 };
+    const height = 330;
+    const margin = { top: 30, right: 30, bottom: 52, left: 62 };
     const innerWidth = width - margin.left - margin.right;
     const innerHeight = height - margin.top - margin.bottom;
     const svg = d3.select(svgElement);
     svg.selectAll('*').remove();
     svg.attr('viewBox', `0 0 ${width} ${height}`);
 
-    const x = d3.scaleBand<number>().domain(data.map((d) => d.year)).range([0, innerWidth]).padding(0.22);
-    const y = d3.scaleLinear().domain([0, d3.max(data, (d) => d.count) || 1]).nice().range([innerHeight, 0]);
+    const x = d3.scalePoint<number>().domain(data.map((d) => d.year)).range([0, innerWidth]).padding(0.35);
+    const y = d3.scaleLinear().domain([0, (d3.max(data, (d) => d.count) || 1) * 1.08]).nice().range([innerHeight, 0]);
     const chart = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+    const defs = svg.append('defs');
+    const lineGradient = defs.append('linearGradient').attr('id', 'paper-growth-line-gradient').attr('x1', '0').attr('x2', '1').attr('y1', '0').attr('y2', '0');
+    lineGradient.append('stop').attr('offset', '0%').attr('stop-color', '#7c3aed');
+    lineGradient.append('stop').attr('offset', '55%').attr('stop-color', '#4f46e5');
+    lineGradient.append('stop').attr('offset', '100%').attr('stop-color', '#2563eb');
+    const areaGradient = defs.append('linearGradient').attr('id', 'paper-growth-area-gradient').attr('x1', '0').attr('x2', '0').attr('y1', '0').attr('y2', '1');
+    areaGradient.append('stop').attr('offset', '0%').attr('stop-color', '#7c3aed').attr('stop-opacity', 0.24);
+    areaGradient.append('stop').attr('offset', '100%').attr('stop-color', '#2563eb').attr('stop-opacity', 0.03);
 
-    chart.append('g').attr('transform', `translate(0,${innerHeight})`).call(d3.axisBottom(x).tickFormat((d) => String(d)));
-    chart.append('g').call(d3.axisLeft(y).ticks(5));
+    chart.append('g').attr('class', 'chart-grid').call(d3.axisLeft(y).ticks(5).tickSize(-innerWidth).tickFormat(() => ''));
+    chart.append('g').attr('class', 'chart-axis').attr('transform', `translate(0,${innerHeight})`).call(d3.axisBottom(x).tickFormat((d) => String(d)));
+    chart.append('g').attr('class', 'chart-axis').call(d3.axisLeft(y).ticks(5).tickFormat((d) => d3.format('~s')(Number(d))));
     chart.append('text').attr('x', innerWidth / 2).attr('y', innerHeight + 46).attr('text-anchor', 'middle').attr('class', 'axis-label').text('Year');
     chart.append('text').attr('transform', 'rotate(-90)').attr('x', -innerHeight / 2).attr('y', -46).attr('text-anchor', 'middle').attr('class', 'axis-label').text('Number of papers');
 
+    const line = d3.line<YearCount>()
+      .x((d) => x(d.year) ?? 0)
+      .y((d) => y(d.count))
+      .curve(d3.curveMonotoneX);
+    const area = d3.area<YearCount>()
+      .x((d) => x(d.year) ?? 0)
+      .y0(innerHeight)
+      .y1((d) => y(d.count))
+      .curve(d3.curveMonotoneX);
+
+    chart.append('path')
+      .datum(data)
+      .attr('fill', 'url(#paper-growth-area-gradient)')
+      .attr('d', area);
+    chart.append('path')
+      .datum(data)
+      .attr('fill', 'none')
+      .attr('stroke', 'url(#paper-growth-line-gradient)')
+      .attr('stroke-width', 3.25)
+      .attr('stroke-linecap', 'round')
+      .attr('stroke-linejoin', 'round')
+      .attr('d', line);
+
     chart
-      .selectAll('rect')
+      .selectAll('circle.paper-growth-point')
       .data(data)
-      .join('rect')
-      .attr('x', (d) => x(d.year) ?? 0)
-      .attr('y', (d) => y(d.count))
-      .attr('width', x.bandwidth())
-      .attr('height', (d) => innerHeight - y(d.count))
-      .attr('rx', 4)
-      .attr('fill', (d) => (d.year === selectedYear ? '#b91c1c' : '#2563eb'))
-      .attr('opacity', 0.9)
+      .join('circle')
+      .attr('class', 'paper-growth-point')
+      .attr('cx', (d) => x(d.year) ?? 0)
+      .attr('cy', (d) => y(d.count))
+      .attr('r', (d) => d.year === selectedYear ? 7 : 5)
+      .attr('fill', '#ffffff')
+      .attr('stroke', (d) => d.year === selectedYear ? '#7c3aed' : '#4f46e5')
+      .attr('stroke-width', (d) => d.year === selectedYear ? 4 : 2.5)
+      .attr('filter', (d) => d.year === selectedYear ? 'drop-shadow(0 0 8px rgba(124, 58, 237, 0.45))' : null)
       .attr('tabindex', 0)
       .style('cursor', 'pointer')
       .on('click', (_, d) => onSelectYear(d.year))
       .on('mouseenter', (event: MouseEvent, d) => {
         const share = totalPapers > 0 ? (d.count / totalPapers) * 100 : 0;
-        setBarDetail({
+        setYearDetail({
           title: `${d.year}: ${d.count.toLocaleString()} papers`,
-          body: `${share.toFixed(1)}% of papers in the timeline. Click this bar to filter the patent citation distribution.`
+          body: `${share.toFixed(1)}% of papers in the timeline. Click this point to filter the patent citation distribution.`
         });
         showTooltip(event, `${d.year}: ${d.count.toLocaleString()} papers`, [
           `${share.toFixed(1)}% of timeline papers`,
@@ -143,11 +176,11 @@ export function PaperGrowthTimeline({ data, selectedYear, onSelectYear, loading,
             <div className="info-panel">
               <strong>{overview?.title ?? 'Timeline overview'}</strong>
               <span>{overview?.body ?? 'Paper counts by publication year.'}</span>
-              <span>Hover a bar to inspect a year. Click a bar to update the patent citation histogram.</span>
+              <span>Hover a point to inspect a year. Click a point to update the patent citation histogram.</span>
             </div>
             <div className="info-panel detail-panel">
-              <strong>{barDetail?.title ?? 'Year detail'}</strong>
-              <span>{barDetail?.body ?? 'Hover a bar to show year-specific details here.'}</span>
+              <strong>{yearDetail?.title ?? 'Year detail'}</strong>
+              <span>{yearDetail?.body ?? 'Hover a point to show year-specific details here.'}</span>
             </div>
           </div>
           <div ref={wrapperRef} className="chart-shell compact-chart">

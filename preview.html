@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>UW-Madison CS Research Network Dashboard Preview</title>
+    <title>UW-Madison CS Research Network Dashboard</title>
     <link rel="stylesheet" href="src/index.css" />
   </head>
   <body>
@@ -110,7 +110,7 @@
               </div>
               <div id="timeline-detail" class="info-panel detail-panel">
                 <strong>Year detail</strong>
-                <span>Hover a bar to inspect year details here.</span>
+                <span>Hover a point to inspect year details here.</span>
               </div>
             </div>
             <div id="timeline-shell" class="chart-shell compact-chart" hidden>
@@ -802,7 +802,7 @@
           setInfo('#timeline-state', 'Paper Growth Overview', [
             `${data.length.toLocaleString()} years displayed`,
             `${d3.sum(data, (d) => d.count).toLocaleString()} total CS-related papers`,
-            'Hover a bar to inspect a year. Click a bar to update the patent citation histogram.'
+            'Hover a point to inspect a year. Click a point to update the patent citation histogram.'
           ]);
           drawTimeline(data);
         } catch (error) {
@@ -812,30 +812,58 @@
 
       function drawTimeline(data) {
         const shell = document.querySelector('#timeline-shell');
-        const width = Math.max(shell.clientWidth, 520), height = 360;
-        const margin = { top: 24, right: 22, bottom: 58, left: 64 };
+        const width = Math.max(shell.clientWidth, 520), height = 330;
+        const margin = { top: 30, right: 30, bottom: 52, left: 62 };
         const svg = d3.select('#paper-timeline').attr('viewBox', `0 0 ${width} ${height}`);
         svg.selectAll('*').remove();
         const innerWidth = width - margin.left - margin.right, innerHeight = height - margin.top - margin.bottom;
         const chart = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
-        const x = d3.scaleBand().domain(data.map((d) => d.year)).range([0, innerWidth]).padding(0.22);
-        const y = d3.scaleLinear().domain([0, d3.max(data, (d) => d.count) || 1]).nice().range([innerHeight, 0]);
-        chart.append('g').attr('transform', `translate(0,${innerHeight})`).call(d3.axisBottom(x));
-        chart.append('g').call(d3.axisLeft(y).ticks(5));
+        const defs = svg.append('defs');
+        const lineGradient = defs.append('linearGradient').attr('id', 'preview-paper-growth-line-gradient').attr('x1', '0').attr('x2', '1').attr('y1', '0').attr('y2', '0');
+        lineGradient.append('stop').attr('offset', '0%').attr('stop-color', '#7c3aed');
+        lineGradient.append('stop').attr('offset', '55%').attr('stop-color', '#4f46e5');
+        lineGradient.append('stop').attr('offset', '100%').attr('stop-color', '#2563eb');
+        const areaGradient = defs.append('linearGradient').attr('id', 'preview-paper-growth-area-gradient').attr('x1', '0').attr('x2', '0').attr('y1', '0').attr('y2', '1');
+        areaGradient.append('stop').attr('offset', '0%').attr('stop-color', '#7c3aed').attr('stop-opacity', 0.24);
+        areaGradient.append('stop').attr('offset', '100%').attr('stop-color', '#2563eb').attr('stop-opacity', 0.03);
+        const x = d3.scalePoint().domain(data.map((d) => d.year)).range([0, innerWidth]).padding(0.35);
+        const y = d3.scaleLinear().domain([0, (d3.max(data, (d) => d.count) || 1) * 1.08]).nice().range([innerHeight, 0]);
+        chart.append('g').attr('class', 'chart-grid').call(d3.axisLeft(y).ticks(5).tickSize(-innerWidth).tickFormat(() => ''));
+        chart.append('g').attr('class', 'chart-axis').attr('transform', `translate(0,${innerHeight})`).call(d3.axisBottom(x));
+        chart.append('g').attr('class', 'chart-axis').call(d3.axisLeft(y).ticks(5).tickFormat((d) => d3.format('~s')(Number(d))));
         chart.append('text').attr('x', innerWidth / 2).attr('y', innerHeight + 46).attr('text-anchor', 'middle').attr('class', 'axis-label').text('Year');
         chart.append('text').attr('transform', 'rotate(-90)').attr('x', -innerHeight / 2).attr('y', -46).attr('text-anchor', 'middle').attr('class', 'axis-label').text('Number of papers');
-        chart.selectAll('rect').data(data).join('rect')
-          .attr('x', (d) => x(d.year))
-          .attr('y', (d) => y(d.count))
-          .attr('width', x.bandwidth())
-          .attr('height', (d) => innerHeight - y(d.count))
-          .attr('rx', 4)
-          .attr('fill', (d) => d.year === selectedYear ? '#b91c1c' : '#2563eb')
-          .attr('opacity', 0.9)
+        const line = d3.line()
+          .x((d) => x(d.year))
+          .y((d) => y(d.count))
+          .curve(d3.curveMonotoneX);
+        const area = d3.area()
+          .x((d) => x(d.year))
+          .y0(innerHeight)
+          .y1((d) => y(d.count))
+          .curve(d3.curveMonotoneX);
+        chart.append('path').datum(data).attr('fill', 'url(#preview-paper-growth-area-gradient)').attr('d', area);
+        chart.append('path')
+          .datum(data)
+          .attr('fill', 'none')
+          .attr('stroke', 'url(#preview-paper-growth-line-gradient)')
+          .attr('stroke-width', 3.25)
+          .attr('stroke-linecap', 'round')
+          .attr('stroke-linejoin', 'round')
+          .attr('d', line);
+        chart.selectAll('circle.paper-growth-point').data(data).join('circle')
+          .attr('class', 'paper-growth-point')
+          .attr('cx', (d) => x(d.year))
+          .attr('cy', (d) => y(d.count))
+          .attr('r', (d) => d.year === selectedYear ? 7 : 5)
+          .attr('fill', '#ffffff')
+          .attr('stroke', (d) => d.year === selectedYear ? '#7c3aed' : '#4f46e5')
+          .attr('stroke-width', (d) => d.year === selectedYear ? 4 : 2.5)
+          .attr('filter', (d) => d.year === selectedYear ? 'drop-shadow(0 0 8px rgba(124, 58, 237, 0.45))' : null)
           .style('cursor', 'pointer')
           .on('click', (_, d) => { selectedYear = d.year; drawTimeline(data); drawHistogram(); })
             .on('mouseenter', (event, d) => {
-              setInfo('#timeline-detail', `${d.year}`, [`${d.count.toLocaleString()} CS-related papers`, 'Click this bar to filter the patent citation histogram.']);
+              setInfo('#timeline-detail', `${d.year}`, [`${d.count.toLocaleString()} CS-related papers`, 'Click this point to filter the patent citation histogram.']);
               showPreviewTooltip(event, `${d.year}: ${d.count.toLocaleString()} papers`, ['CS-related papers', 'Click to filter patent citations']);
             })
             .on('mousemove', (event, d) => showPreviewTooltip(event, `${d.year}: ${d.count.toLocaleString()} papers`, ['CS-related papers', 'Click to filter patent citations']))
@@ -921,18 +949,18 @@
           'Hover a bar to inspect a patent-count bin.'
         ]);
         const shell = document.querySelector('#histogram-shell');
-        const width = Math.max(shell.clientWidth, 520), height = 360;
-        const margin = { top: 24, right: 22, bottom: 58, left: 64 };
+        const width = Math.max(shell.clientWidth, 520), height = 330;
+        const margin = { top: 30, right: 28, bottom: 52, left: 62 };
         const svg = d3.select('#patent-histogram').attr('viewBox', `0 0 ${width} ${height}`);
         svg.selectAll('*').remove();
         const innerWidth = width - margin.left - margin.right, innerHeight = height - margin.top - margin.bottom;
         const chart = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
         const defs = svg.append('defs');
         const barGradient = defs.append('linearGradient').attr('id', 'preview-patent-bar-gradient').attr('x1', '0').attr('x2', '0').attr('y1', '0').attr('y2', '1');
-        barGradient.append('stop').attr('offset', '0%').attr('stop-color', '#149b91');
+        barGradient.append('stop').attr('offset', '0%').attr('stop-color', '#22d3ee');
         barGradient.append('stop').attr('offset', '100%').attr('stop-color', '#0f766e');
         const upperBarGradient = defs.append('linearGradient').attr('id', 'preview-patent-upper-bar-gradient').attr('x1', '0').attr('x2', '0').attr('y1', '0').attr('y2', '1');
-        upperBarGradient.append('stop').attr('offset', '0%').attr('stop-color', '#0f766e');
+        upperBarGradient.append('stop').attr('offset', '0%').attr('stop-color', '#38bdf8');
         upperBarGradient.append('stop').attr('offset', '100%').attr('stop-color', '#0b5f59');
         if (patentRowsAreAggregated) {
           const axisCap = 8;
@@ -953,12 +981,12 @@
               label: `${axisCap + 1}+ patent citations`
             });
           }
-          const x = d3.scaleBand().domain(bars.map((bar) => bar.key)).range([0, innerWidth]).padding(0.18);
+          const x = d3.scaleBand().domain(bars.map((bar) => bar.key)).range([0, innerWidth]).padding(0.28);
           const maxCount = d3.max(bars, (bar) => bar.count) || 1;
           const secondLargestCount = d3.max(bars.filter((bar) => bar.count < maxCount), (bar) => bar.count) || 1;
           const useBrokenAxis = maxCount > secondLargestCount * 6;
-          const topHeight = useBrokenAxis ? 64 : 0;
-          const breakGap = useBrokenAxis ? 34 : 0;
+          const topHeight = useBrokenAxis ? 56 : 0;
+          const breakGap = useBrokenAxis ? 28 : 0;
           const lowerTop = topHeight + breakGap;
           const lowerHeight = innerHeight - lowerTop;
           const lowerMax = useBrokenAxis ? secondLargestCount * 1.18 : maxCount * 1.08;
@@ -968,29 +996,31 @@
             .range([topHeight, 0]);
 
           if (useBrokenAxis) {
-            chart.append('g').call(d3.axisLeft(topY).ticks(2).tickFormat((d) => d3.format('~s')(Number(d))));
-            chart.append('g').attr('transform', `translate(0,${lowerTop})`).call(d3.axisLeft(lowerY).ticks(5));
+            chart.append('g').attr('class', 'chart-grid').attr('transform', `translate(0,${lowerTop})`).call(d3.axisLeft(lowerY).ticks(4).tickSize(-innerWidth).tickFormat(() => ''));
+            chart.append('g').attr('class', 'chart-axis').call(d3.axisLeft(topY).ticks(2).tickFormat((d) => d3.format('~s')(Number(d))));
+            chart.append('g').attr('class', 'chart-axis').attr('transform', `translate(0,${lowerTop})`).call(d3.axisLeft(lowerY).ticks(4).tickFormat((d) => d3.format('~s')(Number(d))));
             chart.append('rect')
               .attr('x', -8)
-              .attr('y', topHeight + 5)
+              .attr('y', topHeight + 4)
               .attr('width', innerWidth + 16)
-              .attr('height', breakGap - 10)
-              .attr('rx', 8)
-              .attr('fill', '#f8fbff');
+              .attr('height', breakGap - 8)
+              .attr('rx', 10)
+              .attr('fill', '#ffffff')
+              .attr('opacity', 0.9);
             chart.append('line')
               .attr('x1', 0)
               .attr('x2', innerWidth)
               .attr('y1', topHeight + 8)
               .attr('y2', topHeight + 8)
-              .attr('stroke', '#d8e0ec')
-              .attr('stroke-dasharray', '4 6');
+              .attr('stroke', '#dbeafe')
+              .attr('stroke-dasharray', '2 8');
             chart.append('line')
               .attr('x1', 0)
               .attr('x2', innerWidth)
               .attr('y1', lowerTop - 8)
               .attr('y2', lowerTop - 8)
-              .attr('stroke', '#d8e0ec')
-              .attr('stroke-dasharray', '4 6');
+              .attr('stroke', '#dbeafe')
+              .attr('stroke-dasharray', '2 8');
             chart.append('g')
               .attr('class', 'axis-break-glyph')
               .selectAll('line')
@@ -1000,8 +1030,8 @@
               .attr('x2', (d) => d + 10)
               .attr('y1', topHeight + 22)
               .attr('y2', topHeight + 12)
-              .attr('stroke', '#64748b')
-              .attr('stroke-width', 2)
+              .attr('stroke', '#38bdf8')
+              .attr('stroke-width', 1.7)
               .attr('stroke-linecap', 'round');
             chart.append('text')
               .attr('x', innerWidth)
@@ -1009,19 +1039,23 @@
               .attr('text-anchor', 'end')
               .attr('fill', '#64748b')
               .attr('font-size', 11)
-              .attr('font-weight', 700)
-              .text('scale break');
+              .attr('font-weight', 650)
+              .text('axis break');
           } else {
-            chart.append('g').call(d3.axisLeft(lowerY).ticks(5));
+            chart.append('g').attr('class', 'chart-grid').call(d3.axisLeft(lowerY).ticks(5).tickSize(-innerWidth).tickFormat(() => ''));
+            chart.append('g').attr('class', 'chart-axis').call(d3.axisLeft(lowerY).ticks(5).tickFormat((d) => d3.format('~s')(Number(d))));
           }
-          chart.append('g').attr('transform', `translate(0,${innerHeight})`).call(d3.axisBottom(x));
-          chart.selectAll('rect').data(bars).join('rect')
+          chart.append('g').attr('class', 'chart-axis').attr('transform', `translate(0,${innerHeight})`).call(d3.axisBottom(x));
+          chart.selectAll('rect.patent-bar').data(bars).join('rect')
+            .attr('class', 'patent-bar')
             .attr('x', (d) => x(d.key))
             .attr('y', (d) => lowerTop + lowerY(Math.min(d.count, lowerMax)))
             .attr('width', x.bandwidth())
             .attr('height', (d) => lowerHeight - lowerY(Math.min(d.count, lowerMax)))
-            .attr('rx', 5)
+            .attr('rx', Math.min(9, x.bandwidth() / 2))
+            .attr('ry', Math.min(9, x.bandwidth() / 2))
             .attr('fill', 'url(#preview-patent-bar-gradient)')
+            .attr('opacity', 0.96)
             .on('mouseenter', (event, d) => {
               const lines = [`${d.label}: ${d.count.toLocaleString()} papers`, selectedYear === null ? 'All years' : `Selected year: ${selectedYear}`];
               setInfo('#histogram-detail', 'Patent citation bin', lines);
@@ -1029,6 +1063,14 @@
             })
             .on('mousemove', (event, d) => showPreviewTooltip(event, 'Patent citation bin', [`${d.label}: ${d.count.toLocaleString()} papers`, selectedYear === null ? 'All years' : `Selected year: ${selectedYear}`]))
             .on('mouseleave', fadePreviewTooltip);
+          chart.selectAll('text.patent-value-label')
+            .data(bars.filter((bar) => !useBrokenAxis || bar.count <= lowerMax))
+            .join('text')
+            .attr('class', 'chart-value-label patent-value-label')
+            .attr('x', (d) => x(d.key) + x.bandwidth() / 2)
+            .attr('y', (d) => lowerTop + lowerY(d.count) - 7)
+            .attr('text-anchor', 'middle')
+            .text((d) => d.count > 0 ? d3.format('~s')(d.count) : '');
 
           if (useBrokenAxis) {
             const brokenBars = bars.filter((bar) => bar.count > lowerMax);
@@ -1038,7 +1080,8 @@
               .attr('y', (d) => topY(d.count))
               .attr('width', x.bandwidth())
               .attr('height', (d) => topHeight - topY(d.count))
-              .attr('rx', 5)
+              .attr('rx', Math.min(9, x.bandwidth() / 2))
+              .attr('ry', Math.min(9, x.bandwidth() / 2))
               .attr('fill', 'url(#preview-patent-upper-bar-gradient)')
               .on('mouseenter', (event, d) => {
                 const lines = [`${d.label}: ${d.count.toLocaleString()} papers`, selectedYear === null ? 'All years' : `Selected year: ${selectedYear}`];
@@ -1066,9 +1109,9 @@
               .attr('y', (d) => Math.max(12, topY(d.count) - 6))
               .attr('text-anchor', 'middle')
               .attr('fill', '#0f172a')
-              .attr('font-size', 12)
-              .attr('font-weight', 700)
-              .text((d) => d.count.toLocaleString());
+              .attr('font-size', 11)
+              .attr('font-weight', 750)
+              .text((d) => d3.format('~s')(d.count));
           }
         } else {
           const bars = d3.bin().domain([0, d3.max(filtered, (row) => row.patentCount) || 1]).thresholds(12)(filtered.map((row) => row.patentCount))
@@ -1080,15 +1123,18 @@
             }));
           const x = d3.scaleLinear().domain([0, d3.max(bars, (bar) => bar.x1) || 1]).nice().range([0, innerWidth]);
           const y = d3.scaleLinear().domain([0, d3.max(bars, (bar) => bar.count) || 1]).nice().range([innerHeight, 0]);
-          chart.append('g').attr('transform', `translate(0,${innerHeight})`).call(d3.axisBottom(x).ticks(6));
-          chart.append('g').call(d3.axisLeft(y).ticks(5));
-          chart.selectAll('rect').data(bars).join('rect')
+          chart.append('g').attr('class', 'chart-grid').call(d3.axisLeft(y).ticks(5).tickSize(-innerWidth).tickFormat(() => ''));
+          chart.append('g').attr('class', 'chart-axis').attr('transform', `translate(0,${innerHeight})`).call(d3.axisBottom(x).ticks(6));
+          chart.append('g').attr('class', 'chart-axis').call(d3.axisLeft(y).ticks(5).tickFormat((d) => d3.format('~s')(Number(d))));
+          chart.selectAll('rect.patent-bar').data(bars).join('rect')
+            .attr('class', 'patent-bar')
             .attr('x', (d) => x(d.x0) + 1)
             .attr('y', (d) => y(d.count))
             .attr('width', (d) => Math.max(0, x(d.x1) - x(d.x0) - 2))
             .attr('height', (d) => innerHeight - y(d.count))
-            .attr('rx', 3)
-            .attr('fill', '#0f766e')
+            .attr('rx', 8)
+            .attr('ry', 8)
+            .attr('fill', 'url(#preview-patent-bar-gradient)')
             .on('mouseenter', (event, d) => {
               const lines = [`${d.label}: ${d.count.toLocaleString()} papers`, selectedYear === null ? 'All years' : `Selected year: ${selectedYear}`];
               setInfo('#histogram-detail', 'Patent citation bin', lines);
@@ -1097,6 +1143,8 @@
             .on('mousemove', (event, d) => showPreviewTooltip(event, 'Patent citation bin', [`${d.label}: ${d.count.toLocaleString()} papers`, selectedYear === null ? 'All years' : `Selected year: ${selectedYear}`]))
             .on('mouseleave', fadePreviewTooltip);
         }
+        chart.append('text').attr('x', innerWidth / 2).attr('y', innerHeight + 46).attr('text-anchor', 'middle').attr('class', 'axis-label').text('Patent citation count');
+        chart.append('text').attr('transform', 'rotate(-90)').attr('x', -innerHeight / 2).attr('y', -46).attr('text-anchor', 'middle').attr('class', 'axis-label').text('Number of papers');
       }
 
       document.querySelector('#zoom-in-network').addEventListener('click', () => {
@@ -1315,8 +1363,7 @@
             `${d3.sum(nodes, (node) => node.paperCount).toLocaleString()} total author-paper contributions`,
             `Average papers per author: ${(d3.mean(nodes, (node) => node.paperCount) || 0).toFixed(2)}`,
             `Average shared papers per link: ${(d3.mean(links, (link) => link.weight) || 0).toFixed(2)}`,
-            nodes.length >= staticAuthorLayoutNodeThreshold ? 'Layout mode: static fitted layout for scale.' : 'Layout mode: dynamic force layout.',
-            'Click a node or link to keep its details fixed in the card; click it again or click empty space to unlock it.'
+            nodes.length >= staticAuthorLayoutNodeThreshold ? 'Layout mode: static fitted layout for scale.' : 'Layout mode: dynamic force layout.'
           ]);
         drawAuthorNetwork(nodes, links);
       }
