@@ -1086,9 +1086,14 @@
 
           if (useBrokenAxis) {
             const brokenBars = bars.filter((bar) => bar.count > lowerMax);
-            chart.selectAll('path.upper-bar').data(brokenBars).join('path')
+            chart.selectAll('rect.upper-bar').data(brokenBars).join('rect')
               .attr('class', 'upper-bar')
-              .attr('d', (d) => topRoundedBarPath(x(d.key), topY(d.count), x.bandwidth(), topHeight - topY(d.count), 9))
+              .attr('x', (d) => x(d.key))
+              .attr('y', (d) => topY(d.count))
+              .attr('width', x.bandwidth())
+              .attr('height', (d) => topHeight - topY(d.count))
+              .attr('rx', Math.min(9, x.bandwidth() / 2))
+              .attr('ry', Math.min(9, x.bandwidth() / 2))
               .attr('fill', 'url(#preview-patent-upper-bar-gradient)')
               .attr('opacity', 0.78)
               .on('mouseenter', (event, d) => {

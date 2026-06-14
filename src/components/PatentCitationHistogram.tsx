@@ -282,11 +282,16 @@ export function PatentCitationHistogram({ papers, selectedYear, onResetYear, loa
       if (useBrokenAxis) {
         const brokenBars = aggregatedCategories.filter((bar) => bar.count > lowerMax);
         chart
-          .selectAll('path.upper-bar')
+          .selectAll('rect.upper-bar')
           .data(brokenBars)
-          .join('path')
+          .join('rect')
           .attr('class', 'upper-bar')
-          .attr('d', (d) => topRoundedBarPath(x(d.key) ?? 0, topY(d.count), x.bandwidth(), topHeight - topY(d.count), 9))
+          .attr('x', (d) => x(d.key) ?? 0)
+          .attr('y', (d) => topY(d.count))
+          .attr('width', x.bandwidth())
+          .attr('height', (d) => topHeight - topY(d.count))
+          .attr('rx', Math.min(9, x.bandwidth() / 2))
+          .attr('ry', Math.min(9, x.bandwidth() / 2))
           .attr('fill', 'url(#patent-upper-bar-gradient)')
           .attr('opacity', 0.78)
           .on('mouseenter', (event: MouseEvent, d) => {
