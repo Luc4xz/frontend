@@ -1,35 +1,19 @@
-Raw source data should go in `public/data/raw/`.
+Prepared split network data is stored in the repository-root `data/` folder.
 
-Do not load raw CSV, JSON, or Parquet files directly in the frontend. Run the preprocessing script first:
+GitHub Pages can fetch these files directly because they are normal JSON files,
+not Git LFS pointers. The static preview loads the overview files first:
+
+- `data/citation_network_top500.json`
+- `data/author_collaboration_network_top1000.json`
+
+The "Load More Data" buttons then read the part files listed in:
+
+- `data/citation_network_manifest.json`
+- `data/author_collaboration_network_manifest.json`
+
+To regenerate split files:
 
 ```powershell
-python scripts/preprocess_data.py --input public/data/raw --output public/data/processed
+python scripts/split_network_json.py paper_citation_network_2019_2024.json --output-dir data --prefix citation_network --top-n 500 --max-mb 24
+python scripts/split_network_json.py uw_madison_5yr_author_collaboration_no_huge_papers.json --output-dir data --prefix author_collaboration_network --top-n 1000 --max-mb 24
 ```
-
-By default, preprocessing writes all available nodes, links, and metadata records. Pass `--limit N` only when you intentionally want a smaller preview subset.
-
-The React/D3 frontend reads only these prepared files:
-
-- `public/data/processed/paper_citation_network_top.json`
-- `public/data/processed/author_collaboration_network_top.json` when author data exists
-- `public/data/processed/paper_growth_timeline.json`
-- `public/data/processed/patent_citation_records.json`
-- `public/data/processed/manifest.json`
-
-Expected raw paper citation inputs:
-
-- `paper_citation_nodes_2020_2026.csv`
-- `paper_citation_edges_2020_2026.csv`
-- or `paper_citation_network_2020_2026.json`
-
-Expected raw dashboard inputs:
-
-- `uw_madison_cs_papers_10yr.csv`
-- `uw_madison_cs_papers_5yr.csv`
-- `uw_madison_cs_paper_ids.csv`
-
-Optional raw author collaboration inputs:
-
-- `author_collaboration_network_2020_2026.json`
-- `author_collaboration_nodes_2020_2026.csv`
-- `author_collaboration_edges_2020_2026.csv`

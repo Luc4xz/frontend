@@ -39,7 +39,7 @@ function App() {
         setPaperLinks(graph.links);
       })
       .catch(() => {
-        if (active) setPaperError('Prepared paper citation JSON could not be loaded. Run scripts/preprocess_data.py to create public/data/processed/paper_citation_network_top.json.');
+        if (active) setPaperError('Prepared paper citation JSON could not be loaded. Run scripts/split_network_json.py to create data/citation_network_top500.json.');
       })
       .finally(() => {
         if (active) setPaperLoading(false);
@@ -67,7 +67,7 @@ function App() {
         if (active) setGrowthData(data);
       })
       .catch(() => {
-        if (active) setGrowthError('Prepared paper growth JSON could not be loaded. Run scripts/preprocess_data.py to create public/data/processed/paper_growth_timeline.json.');
+        if (active) setGrowthError('Paper growth JSON could not be loaded from paper_growth_10yr.json.');
       })
       .finally(() => {
         if (active) setGrowthLoading(false);
@@ -78,7 +78,7 @@ function App() {
         if (active) setPaperMetadata(data);
       })
       .catch(() => {
-        if (active) setMetadataError('Prepared patent citation JSON could not be loaded. Run scripts/preprocess_data.py to create public/data/processed/patent_citation_records.json.');
+        if (active) setMetadataError('Patent citation JSON could not be loaded from patent_histogram_by_year.json or patent_count_distribution.json.');
       })
       .finally(() => {
         if (active) setMetadataLoading(false);

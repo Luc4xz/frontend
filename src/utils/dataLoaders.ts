@@ -15,7 +15,7 @@ export async function loadPaperCitationGraph(): Promise<{ nodes: PaperNode[]; li
       nodes?: Array<Record<string, string | number | null | undefined>>;
       links?: Array<Record<string, string | number | null | undefined>>;
       edges?: Array<Record<string, string | number | null | undefined>>;
-    }>('paper_citation_network_2019_2024.json');
+    }>('data/citation_network_top500.json');
     if (graph?.nodes?.length) {
       const nodes = graph.nodes.map((node, index) => {
         const id = String(node.id ?? `paper-${index + 1}`);
@@ -64,7 +64,7 @@ export async function loadAuthorCollaborationGraph(): Promise<{ nodes: AuthorNod
       nodes?: Array<Record<string, string | number | string[] | number[] | null | undefined>>;
       links?: Array<Record<string, string | number | string[] | number[] | null | undefined>>;
       edges?: Array<Record<string, string | number | string[] | number[] | null | undefined>>;
-    }>('uw_madison_5yr_author_collaboration_network_web.json');
+    }>('data/author_collaboration_network_top1000.json');
     if (graph?.nodes?.length) {
       const nodes = graph.nodes.map((node, index) => {
         const id = String(node.id ?? `author-${index + 1}`);
@@ -101,24 +101,6 @@ export async function loadAuthorCollaborationGraph(): Promise<{ nodes: AuthorNod
 
 export async function loadPaperGrowth(): Promise<YearCount[]> {
   try {
-    const dashboard = await d3.json<{
-      timeline?: Array<{ year?: number; count?: number; paper_count?: number; paperCount?: number }>;
-    }>('dashboard_data.json');
-    if (dashboard?.timeline?.length) {
-      return dashboard.timeline
-        .map((row) => ({
-          year: Number(row.year),
-          count: Number(row.count ?? row.paper_count ?? row.paperCount ?? 0),
-          raw: row
-        }))
-        .filter((row) => Number.isFinite(row.year) && row.year > 0)
-        .sort((a, b) => a.year - b.year);
-    }
-  } catch {
-    // Fall back to the separate root JSON file.
-  }
-
-  try {
     const growth = await d3.json<Array<{ year?: number; count?: number; paper_count?: number; paperCount?: number }>>('paper_growth_10yr.json');
     if (growth?.length) {
       return growth
@@ -151,45 +133,6 @@ export async function loadPaperMetadata(): Promise<PaperMetadata[]> {
           raw: bin
         }))
       );
-    }
-  } catch {
-    // Fall back to dashboard_data.json.
-  }
-
-  try {
-    const dashboard = await d3.json<{
-      defaultPatentHistogram?: Array<{ patent_count?: number; patentCount?: number; paper_count?: number; paperCount?: number }>;
-      patentHistogramByYear?: Record<string, Array<{ patent_count?: number; patentCount?: number; paper_count?: number; paperCount?: number }>>;
-      patentHistogramsByYear?: Record<string, Array<{ patent_count?: number; patentCount?: number; paper_count?: number; paperCount?: number }>>;
-      yearlyPatentHistograms?: Array<{ year?: number; histogram?: Array<{ patent_count?: number; patentCount?: number; paper_count?: number; paperCount?: number }> }>;
-    }>('dashboard_data.json');
-    const byYear = dashboard?.patentHistogramByYear ?? dashboard?.patentHistogramsByYear;
-    if (byYear) {
-      return Object.entries(byYear).flatMap(([year, bins]) =>
-        bins.map((bin) => ({
-          year: Number(year),
-          patentCount: Number(bin.patent_count ?? bin.patentCount ?? 0),
-          paperCount: Number(bin.paper_count ?? bin.paperCount ?? 0),
-          raw: bin
-        }))
-      );
-    }
-    if (dashboard?.yearlyPatentHistograms?.length) {
-      return dashboard.yearlyPatentHistograms.flatMap((entry) =>
-        (entry.histogram ?? []).map((bin) => ({
-          year: Number(entry.year),
-          patentCount: Number(bin.patent_count ?? bin.patentCount ?? 0),
-          paperCount: Number(bin.paper_count ?? bin.paperCount ?? 0),
-          raw: bin
-        }))
-      );
-    }
-    if (dashboard?.defaultPatentHistogram?.length) {
-      return dashboard.defaultPatentHistogram.map((bin) => ({
-        patentCount: Number(bin.patent_count ?? bin.patentCount ?? 0),
-        paperCount: Number(bin.paper_count ?? bin.paperCount ?? 0),
-        raw: bin
-      }));
     }
   } catch {
     // Fall back to the separate patent histogram file.
