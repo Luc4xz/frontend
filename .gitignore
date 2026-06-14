@@ -1,0 +1,4 @@
+# Keep large source network datasets local. Publish split files from data/ instead.
+paper_citation_network_2019_2024.json
+uw_madison_5yr_author_collaboration_network_web.json
+uw_madison_5yr_author_collaboration_no_huge_papers.json
