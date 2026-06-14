@@ -1,2 +1,0 @@
-*.json filter=lfs diff=lfs merge=lfs -text
-uw_madison_5yr_author_collaboration_no_huge_papers.json filter=lfs diff=lfs merge=lfs -text
