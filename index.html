@@ -47,10 +47,6 @@
               <select id="paper-year-start"><option value="all">All years</option></select>
             </label>
             <label>
-              Year to
-              <select id="paper-year-end"><option value="all">All years</option></select>
-            </label>
-            <label>
               Min citations
               <select id="paper-min-citations"></select>
             </label>
@@ -153,12 +149,6 @@
             <label>
               Year from
               <select id="author-year-start" disabled>
-                <option value="all">All years</option>
-              </select>
-            </label>
-            <label>
-              Year to
-              <select id="author-year-end" disabled>
                 <option value="all">All years</option>
               </select>
             </label>
@@ -470,10 +460,7 @@
           }));
           paperLinks = graph.links || [];
           paperYearOptions = [...new Set(paperNodes.map((node) => node.year).filter((year) => Number.isFinite(year)))].sort((a, b) => a - b);
-          ['#paper-year-start', '#paper-year-end'].forEach((selector) => {
-            const select = document.querySelector(selector);
-            select.innerHTML = '<option value="all">All years</option>' + paperYearOptions.map((year) => `<option value="${year}">${year}</option>`).join('');
-          });
+          document.querySelector('#paper-year-start').innerHTML = '<option value="all">All years</option>' + paperYearOptions.map((year) => `<option value="${year}">${year}</option>`).join('');
           if (!paperNodes.length) {
             document.querySelector('#network-state').textContent = 'Prepared paper citation JSON is empty. Split the raw network into data/citation_network_top500.json and part files.';
             return;
@@ -498,13 +485,10 @@
           degree.set(target, (degree.get(target) || 0) + 1);
         });
         const startValue = document.querySelector('#paper-year-start').value;
-        const endValue = document.querySelector('#paper-year-end').value;
         const firstYear = paperYearOptions[0] ?? Number.NEGATIVE_INFINITY;
         const lastYear = paperYearOptions[paperYearOptions.length - 1] ?? Number.POSITIVE_INFINITY;
-        const yearStart = startValue === 'all' ? firstYear : Number(startValue);
-        const yearEnd = endValue === 'all' ? lastYear : Number(endValue);
-        const normalizedStart = Math.min(yearStart, yearEnd);
-        const normalizedEnd = Math.max(yearStart, yearEnd);
+        const normalizedStart = startValue === 'all' ? firstYear : Number(startValue);
+        const normalizedEnd = lastYear;
         const minCitations = Number(document.querySelector('#paper-min-citations').value || 0);
         const minDegree = Number(document.querySelector('#paper-min-degree').value || 0);
         const minPatents = Number(document.querySelector('#paper-min-patents').value || 0);
@@ -1240,7 +1224,6 @@
       document.querySelector('#paper-display-limit').value = '500';
       [
         '#paper-year-start',
-        '#paper-year-end',
         '#paper-min-citations',
         '#paper-min-degree',
         '#paper-min-patents',
@@ -1254,7 +1237,6 @@
       populateSelect('#author-display-limit', displayLimitOptions, displayLimitLabel);
       [
         '#author-year-start',
-        '#author-year-end',
         '#author-min-papers',
         '#author-min-collaborators',
         '#author-min-shared',
@@ -1300,12 +1282,9 @@
             ...authorNodes.flatMap(itemYears),
             ...authorLinks.flatMap(itemYears)
           ])].sort((a, b) => a - b);
-          const yearSelects = ['#author-year-start', '#author-year-end'];
-          yearSelects.forEach((selector) => {
-            const select = document.querySelector(selector);
-            select.disabled = !authorYearOptions.length;
-            select.innerHTML = '<option value="all">All years</option>' + authorYearOptions.map((year) => `<option value="${year}">${year}</option>`).join('');
-          });
+          const yearSelect = document.querySelector('#author-year-start');
+          yearSelect.disabled = !authorYearOptions.length;
+          yearSelect.innerHTML = '<option value="all">All years</option>' + authorYearOptions.map((year) => `<option value="${year}">${year}</option>`).join('');
           document.querySelector('#author-year-note').hidden = Boolean(authorYearOptions.length);
           if (!authorNodes.length) {
             document.querySelector('#author-network-state').hidden = false;
@@ -1329,13 +1308,10 @@
         const displayLimitValue = document.querySelector('#author-display-limit').value || String(authorDisplayNodeLimit);
         const displayLimit = displayLimitValue === 'all' ? 'all' : Number(displayLimitValue);
         const startValue = document.querySelector('#author-year-start').value;
-        const endValue = document.querySelector('#author-year-end').value;
         const firstYear = authorYearOptions[0] ?? Number.NEGATIVE_INFINITY;
         const lastYear = authorYearOptions[authorYearOptions.length - 1] ?? Number.POSITIVE_INFINITY;
-        const yearStart = startValue === 'all' ? firstYear : Number(startValue);
-        const yearEnd = endValue === 'all' ? lastYear : Number(endValue);
-        const normalizedStart = Math.min(yearStart, yearEnd);
-        const normalizedEnd = Math.max(yearStart, yearEnd);
+        const normalizedStart = startValue === 'all' ? firstYear : Number(startValue);
+        const normalizedEnd = lastYear;
         const yearFilterActive = Boolean(authorYearOptions.length);
         const eligibleLinks = authorLinks.filter((link) =>
           Number(link.weight || link.shared_paper_count || 1) >= minSharedPapers &&

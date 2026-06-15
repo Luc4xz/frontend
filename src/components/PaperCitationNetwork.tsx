@@ -158,7 +158,6 @@ export function PaperCitationNetwork({ nodes, links, loading, error }: PaperCita
   const tooltipTimerRef = useRef<number | null>(null);
 
   const [startYear, setStartYear] = useState<number | 'all'>('all');
-  const [endYear, setEndYear] = useState<number | 'all'>('all');
   const [minCitations, setMinCitations] = useState(0);
   const [minDegree, setMinDegree] = useState(0);
   const [minPatentCount, setMinPatentCount] = useState(0);
@@ -186,10 +185,8 @@ export function PaperCitationNetwork({ nodes, links, loading, error }: PaperCita
   const filtered = useMemo(() => {
     const firstYear = years[0] ?? Number.NEGATIVE_INFINITY;
     const lastYear = years[years.length - 1] ?? Number.POSITIVE_INFINITY;
-    const rangeStart = startYear === 'all' ? firstYear : startYear;
-    const rangeEnd = endYear === 'all' ? lastYear : endYear;
-    const lowYear = Math.min(rangeStart, rangeEnd);
-    const highYear = Math.max(rangeStart, rangeEnd);
+    const lowYear = startYear === 'all' ? firstYear : startYear;
+    const highYear = lastYear;
 
     const eligibleNodes = nodes.filter((node) => {
       const degree = node.totalDegree ?? degreeById.get(node.id) ?? 0;
@@ -206,7 +203,7 @@ export function PaperCitationNetwork({ nodes, links, loading, error }: PaperCita
     const visibleIds = new Set(visibleNodes.map((node) => node.id));
     const visibleLinks = links.filter((link) => visibleIds.has(linkId(link.source)) && visibleIds.has(linkId(link.target)));
     return { nodes: visibleNodes, links: visibleLinks };
-  }, [degreeById, displayLimit, endYear, hideIsolated, links, minCitations, minDegree, minPatentCount, minReferenceCount, nodes, startYear, years]);
+  }, [degreeById, displayLimit, hideIsolated, links, minCitations, minDegree, minPatentCount, minReferenceCount, nodes, startYear, years]);
 
   const staticMode = filtered.nodes.length > dynamicNodeLimit;
 
@@ -501,7 +498,6 @@ export function PaperCitationNetwork({ nodes, links, loading, error }: PaperCita
 
   function resetFilters() {
     setStartYear('all');
-    setEndYear('all');
     setMinCitations(0);
     setMinDegree(0);
     setMinPatentCount(0);
@@ -539,13 +535,6 @@ export function PaperCitationNetwork({ nodes, links, loading, error }: PaperCita
         <label>
           Year from
           <select value={startYear} onChange={(event) => setStartYear(event.target.value === 'all' ? 'all' : Number(event.target.value))}>
-            <option value="all">All years</option>
-            {years.map((year) => <option key={year} value={year}>{year}</option>)}
-          </select>
-        </label>
-        <label>
-          Year to
-          <select value={endYear} onChange={(event) => setEndYear(event.target.value === 'all' ? 'all' : Number(event.target.value))}>
             <option value="all">All years</option>
             {years.map((year) => <option key={year} value={year}>{year}</option>)}
           </select>

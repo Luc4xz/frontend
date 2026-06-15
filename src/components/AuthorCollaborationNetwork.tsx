@@ -173,7 +173,6 @@ export function AuthorCollaborationNetwork({ nodes, links, loading, missing, err
   const [minSharedPapers, setMinSharedPapers] = useState(1);
   const [displayLimit, setDisplayLimit] = useState<DisplayLimit>(defaultDisplayLimit);
   const [startYear, setStartYear] = useState<number | 'all'>('all');
-  const [endYear, setEndYear] = useState<number | 'all'>('all');
   const [hoverDetail, setHoverDetail] = useState<Detail | null>(null);
   const [pinnedDetail, setPinnedDetail] = useState<Detail | null>(null);
   const [floatingDetail, setFloatingDetail] = useState<FloatingDetail | null>(null);
@@ -189,10 +188,8 @@ export function AuthorCollaborationNetwork({ nodes, links, loading, missing, err
   const filtered = useMemo(() => {
     const firstYear = yearOptions[0] ?? Number.NEGATIVE_INFINITY;
     const lastYear = yearOptions[yearOptions.length - 1] ?? Number.POSITIVE_INFINITY;
-    const rangeStart = startYear === 'all' ? firstYear : startYear;
-    const rangeEnd = endYear === 'all' ? lastYear : endYear;
-    const lowYear = Math.min(rangeStart, rangeEnd);
-    const highYear = Math.max(rangeStart, rangeEnd);
+    const lowYear = startYear === 'all' ? firstYear : startYear;
+    const highYear = lastYear;
     const hasYearFilter = Boolean(yearOptions.length);
 
     const eligibleLinks = links.filter((link) =>
@@ -215,7 +212,7 @@ export function AuthorCollaborationNetwork({ nodes, links, loading, missing, err
     const visibleIds = new Set(visibleNodes.map((node) => node.id));
     const visibleLinks = eligibleLinks.filter((link) => visibleIds.has(endpointId(link.source)) && visibleIds.has(endpointId(link.target)));
     return { nodes: visibleNodes, links: visibleLinks };
-  }, [displayLimit, endYear, links, minCollaboratorCount, minPaperCount, minSharedPapers, nodes, startYear, yearOptions]);
+  }, [displayLimit, links, minCollaboratorCount, minPaperCount, minSharedPapers, nodes, startYear, yearOptions]);
 
   const staticMode = filtered.nodes.length >= dynamicNodeLimit;
 
@@ -545,13 +542,6 @@ export function AuthorCollaborationNetwork({ nodes, links, loading, missing, err
         <label>
           Year from
           <select value={startYear} onChange={(event) => setStartYear(event.target.value === 'all' ? 'all' : Number(event.target.value))} disabled={!yearOptions.length}>
-            <option value="all">All years</option>
-            {yearOptions.map((year) => <option key={year} value={year}>{year}</option>)}
-          </select>
-        </label>
-        <label>
-          Year to
-          <select value={endYear} onChange={(event) => setEndYear(event.target.value === 'all' ? 'all' : Number(event.target.value))} disabled={!yearOptions.length}>
             <option value="all">All years</option>
             {yearOptions.map((year) => <option key={year} value={year}>{year}</option>)}
           </select>
