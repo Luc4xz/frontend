@@ -116,30 +116,6 @@ function displayLimitLabel(value: DisplayLimit) {
   return value >= 5000 ? `${label} (highly unrecommended)` : label;
 }
 
-function numberValue(value: unknown) {
-  const number = Number(value);
-  return Number.isFinite(number) ? number : undefined;
-}
-
-function collectYears(record: Record<string, unknown> | undefined) {
-  if (!record) return [];
-  const fields = ['year', 'publication_year', 'publicationYear', 'years', 'publication_years', 'publicationYears', 'shared_years', 'sharedYears'];
-  return fields.flatMap((field) => {
-    const value = record[field];
-    const values = Array.isArray(value) ? value : [value];
-    return values.map(numberValue).filter((year): year is number => Number.isFinite(year) && year >= 1900 && year <= 2100);
-  });
-}
-
-function itemYears(item: AuthorNode | AuthorLink) {
-  return [...collectYears(item as unknown as Record<string, unknown>), ...collectYears(item.raw as Record<string, unknown> | undefined)];
-}
-
-function overlapsYearRange(years: number[], startYear: number, endYear: number) {
-  if (!years.length) return true;
-  return years.some((year) => year >= startYear && year <= endYear);
-}
-
 function distanceToSegment(px: number, py: number, x1: number, y1: number, x2: number, y2: number) {
   const dx = x2 - x1;
   const dy = y2 - y1;
@@ -172,29 +148,14 @@ export function AuthorCollaborationNetwork({ nodes, links, loading, missing, err
   const [minCollaboratorCount, setMinCollaboratorCount] = useState(0);
   const [minSharedPapers, setMinSharedPapers] = useState(1);
   const [displayLimit, setDisplayLimit] = useState<DisplayLimit>(defaultDisplayLimit);
-  const [startYear, setStartYear] = useState<number | 'all'>('all');
   const [hoverDetail, setHoverDetail] = useState<Detail | null>(null);
   const [pinnedDetail, setPinnedDetail] = useState<Detail | null>(null);
   const [floatingDetail, setFloatingDetail] = useState<FloatingDetail | null>(null);
   const [resizeTick, setResizeTick] = useState(0);
 
-  const yearOptions = useMemo(() => {
-    const years = new Set<number>();
-    nodes.forEach((node) => itemYears(node).forEach((year) => years.add(year)));
-    links.forEach((link) => itemYears(link).forEach((year) => years.add(year)));
-    return [...years].sort((a, b) => a - b);
-  }, [links, nodes]);
-
   const filtered = useMemo(() => {
-    const firstYear = yearOptions[0] ?? Number.NEGATIVE_INFINITY;
-    const lastYear = yearOptions[yearOptions.length - 1] ?? Number.POSITIVE_INFINITY;
-    const lowYear = startYear === 'all' ? firstYear : startYear;
-    const highYear = lastYear;
-    const hasYearFilter = Boolean(yearOptions.length);
-
     const eligibleLinks = links.filter((link) =>
-      Number(link.weight ?? link.raw.shared_paper_count ?? 1) >= minSharedPapers &&
-      (!hasYearFilter || overlapsYearRange(itemYears(link), lowYear, highYear))
+      Number(link.weight ?? link.raw.shared_paper_count ?? 1) >= minSharedPapers
     );
     const linkedIds = new Set<string>();
     eligibleLinks.forEach((link) => {
@@ -204,15 +165,14 @@ export function AuthorCollaborationNetwork({ nodes, links, loading, missing, err
 
     const eligibleNodes = nodes.filter((node) =>
       node.paperCount >= minPaperCount &&
-      Number(node.collaborationCount ?? 0) >= minCollaboratorCount &&
-      (!hasYearFilter || overlapsYearRange(itemYears(node), lowYear, highYear) || linkedIds.has(node.id))
+      Number(node.collaborationCount ?? 0) >= minCollaboratorCount
     );
     const sortedNodes = [...eligibleNodes].sort((a, b) => b.paperCount - a.paperCount);
     const visibleNodes = displayLimit === 'all' ? sortedNodes : sortedNodes.slice(0, displayLimit);
     const visibleIds = new Set(visibleNodes.map((node) => node.id));
     const visibleLinks = eligibleLinks.filter((link) => visibleIds.has(endpointId(link.source)) && visibleIds.has(endpointId(link.target)));
     return { nodes: visibleNodes, links: visibleLinks };
-  }, [displayLimit, links, minCollaboratorCount, minPaperCount, minSharedPapers, nodes, startYear, yearOptions]);
+  }, [displayLimit, links, minCollaboratorCount, minPaperCount, minSharedPapers, nodes]);
 
   const staticMode = filtered.nodes.length >= dynamicNodeLimit;
 
@@ -540,13 +500,6 @@ export function AuthorCollaborationNetwork({ nodes, links, loading, missing, err
 
       <div className="panel-controls">
         <label>
-          Year from
-          <select value={startYear} onChange={(event) => setStartYear(event.target.value === 'all' ? 'all' : Number(event.target.value))} disabled={!yearOptions.length}>
-            <option value="all">All years</option>
-            {yearOptions.map((year) => <option key={year} value={year}>{year}</option>)}
-          </select>
-        </label>
-        <label>
           Min papers
           <select value={minPaperCount} onChange={(event) => setMinPaperCount(Number(event.target.value))}>
             {paperCountOptions.map((count) => <option key={count} value={count}>{count}+</option>)}
@@ -571,10 +524,6 @@ export function AuthorCollaborationNetwork({ nodes, links, loading, missing, err
           </select>
         </label>
       </div>
-      {!yearOptions.length && !loading && !missing && (
-        <div className="control-note">Year filters will activate when author collaboration data includes year fields.</div>
-      )}
-
       {error && <div className="state-box error">{error}</div>}
       {!loading && missing && <div className="state-box">Author collaboration data not loaded yet.</div>}
       {!loading && !missing && !filtered.nodes.length && <div className="state-box">No author collaboration network matches the current controls.</div>}

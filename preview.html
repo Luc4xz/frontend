@@ -147,12 +147,6 @@
           </div>
           <div class="panel-controls">
             <label>
-              Year from
-              <select id="author-year-start" disabled>
-                <option value="all">All years</option>
-              </select>
-            </label>
-            <label>
               Min papers
               <select id="author-min-papers"></select>
             </label>
@@ -169,7 +163,6 @@
               <select id="author-display-limit"></select>
             </label>
           </div>
-          <div id="author-year-note" class="control-note" hidden>Year filters will activate when author collaboration data includes year fields.</div>
           <div class="section-info-stack">
             <div id="author-overview" class="info-panel">
               <strong>Author collaboration overview</strong>
@@ -245,7 +238,6 @@
       let authorNetworkSimulation = null;
       let authorNodes = [];
       let authorLinks = [];
-      let authorYearOptions = [];
       let authorNetworkManifest = null;
       let authorNetworkLoadedAll = false;
       let authorDetailPinned = false;
@@ -340,32 +332,6 @@
         tooltip.className = 'floating-tooltip fading';
         if (previewTooltipTimer) window.clearTimeout(previewTooltipTimer);
         previewTooltipTimer = window.setTimeout(() => tooltip.remove(), 1800);
-      }
-
-      function numericValue(value) {
-        const number = Number(value);
-        return Number.isFinite(number) ? number : undefined;
-      }
-
-      function collectYears(record) {
-        if (!record) return [];
-        const yearFields = ['year', 'publication_year', 'publicationYear', 'years', 'publication_years', 'publicationYears', 'shared_years', 'sharedYears'];
-        return yearFields.flatMap((field) => {
-          const value = record[field];
-          const values = Array.isArray(value) ? value : [value];
-          return values
-            .map(numericValue)
-            .filter((year) => Number.isFinite(year) && year >= 1900 && year <= 2100);
-        });
-      }
-
-      function itemYears(item) {
-        return [...collectYears(item), ...collectYears(item.raw)];
-      }
-
-      function overlapsYearRange(years, startYear, endYear) {
-        if (!years.length) return true;
-        return years.some((year) => year >= startYear && year <= endYear);
       }
 
       function populateSelect(selector, values, formatter = (value) => value) {
@@ -1236,7 +1202,6 @@
       populateSelect('#author-min-shared', sharedPaperOptions, (value) => `${value}+`);
       populateSelect('#author-display-limit', displayLimitOptions, displayLimitLabel);
       [
-        '#author-year-start',
         '#author-min-papers',
         '#author-min-collaborators',
         '#author-min-shared',
@@ -1278,14 +1243,6 @@
             weight: Number(link.weight || link.shared_paper_count || 1),
             raw: link
           })).filter((link) => link.source && link.target);
-          authorYearOptions = [...new Set([
-            ...authorNodes.flatMap(itemYears),
-            ...authorLinks.flatMap(itemYears)
-          ])].sort((a, b) => a - b);
-          const yearSelect = document.querySelector('#author-year-start');
-          yearSelect.disabled = !authorYearOptions.length;
-          yearSelect.innerHTML = '<option value="all">All years</option>' + authorYearOptions.map((year) => `<option value="${year}">${year}</option>`).join('');
-          document.querySelector('#author-year-note').hidden = Boolean(authorYearOptions.length);
           if (!authorNodes.length) {
             document.querySelector('#author-network-state').hidden = false;
             document.querySelector('#author-network-state').textContent = 'Author collaboration data not loaded yet.';
@@ -1307,15 +1264,8 @@
         const minSharedPapers = Number(document.querySelector('#author-min-shared').value || 1);
         const displayLimitValue = document.querySelector('#author-display-limit').value || String(authorDisplayNodeLimit);
         const displayLimit = displayLimitValue === 'all' ? 'all' : Number(displayLimitValue);
-        const startValue = document.querySelector('#author-year-start').value;
-        const firstYear = authorYearOptions[0] ?? Number.NEGATIVE_INFINITY;
-        const lastYear = authorYearOptions[authorYearOptions.length - 1] ?? Number.POSITIVE_INFINITY;
-        const normalizedStart = startValue === 'all' ? firstYear : Number(startValue);
-        const normalizedEnd = lastYear;
-        const yearFilterActive = Boolean(authorYearOptions.length);
         const eligibleLinks = authorLinks.filter((link) =>
-          Number(link.weight || link.shared_paper_count || 1) >= minSharedPapers &&
-          (!yearFilterActive || overlapsYearRange(itemYears(link), normalizedStart, normalizedEnd))
+          Number(link.weight || link.shared_paper_count || 1) >= minSharedPapers
         );
         const linkedIds = new Set();
         eligibleLinks.forEach((link) => {
@@ -1324,8 +1274,7 @@
         });
         const eligibleNodes = authorNodes.filter((node) =>
           node.paperCount >= minPaperCount &&
-          Number(node.collaborationCount || 0) >= minCollaboratorCount &&
-          (!yearFilterActive || overlapsYearRange(itemYears(node), normalizedStart, normalizedEnd) || linkedIds.has(node.id))
+          Number(node.collaborationCount || 0) >= minCollaboratorCount
         );
         const sortedNodes = [...eligibleNodes].sort((a, b) => b.paperCount - a.paperCount);
         const nodes = displayLimit === 'all' ? sortedNodes : sortedNodes.slice(0, displayLimit);
