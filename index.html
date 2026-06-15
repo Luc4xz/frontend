@@ -461,6 +461,10 @@
         const minReferences = Number(document.querySelector('#paper-min-references').value || 0);
         const displayLimitValue = document.querySelector('#paper-display-limit').value || '500';
         const displayLimit = displayLimitValue === 'all' ? 'all' : Number(displayLimitValue);
+        if (!paperNetworkLoadedAll && paperNetworkManifest && (displayLimit === 'all' || displayLimit > paperNodes.length)) {
+          loadFullPaperNetwork();
+          return;
+        }
         const hideIsolated = document.querySelector('#paper-hide-isolated').checked;
         const filteredNodes = paperNodes.filter((node) => {
           if (Number.isFinite(node.year) && (node.year < normalizedStart || node.year > normalizedEnd)) return false;
@@ -484,6 +488,30 @@
           'Hover a node or edge to inspect details. Click a node to keep its details fixed; click the same node again to unpin. Double-click the network to zoom in.'
         ]);
         drawNetwork(visibleNodes, links);
+      }
+
+      async function loadFullPaperNetwork() {
+        const button = document.querySelector('#load-more-paper-network');
+        if (!paperNetworkManifest || paperNetworkLoadedAll || button.disabled) return;
+        button.disabled = true;
+        button.textContent = 'Loading...';
+        try {
+          const files = [
+            ...(paperNetworkManifest.parts || []),
+            ...(paperNetworkManifest.isolated ? [paperNetworkManifest.isolated] : [])
+          ].map((file) => `data/${file}`);
+          const graph = await loadNetworkFiles(files, '#network-state', 'Paper citation network');
+          paperNetworkLoadedAll = true;
+          applyPaperGraph(graph);
+          setInfo('#network-state', 'Paper Citation Network Loaded', [
+            `Loaded ${paperNodes.length.toLocaleString()} nodes and ${paperLinks.length.toLocaleString()} links.`,
+            'Use filters and pan the canvas to explore the larger graph.'
+          ]);
+        } catch (error) {
+          document.querySelector('#network-state').textContent = `Paper citation network could not load more data. ${error.message || error}`;
+          button.disabled = false;
+          button.textContent = 'Load More Data';
+        }
       }
 
       function drawNetwork(nodes, links, forceStaticLayout = false) {
@@ -1121,27 +1149,7 @@
         if (networkZoom) d3.select('#paper-network').transition().duration(350).call(networkZoom.transform, networkDefaultTransform);
       });
       document.querySelector('#load-more-paper-network').addEventListener('click', async () => {
-        const button = document.querySelector('#load-more-paper-network');
-        if (!paperNetworkManifest || button.disabled) return;
-        button.disabled = true;
-        button.textContent = 'Loading...';
-        try {
-          const files = [
-            ...(paperNetworkManifest.parts || []),
-            ...(paperNetworkManifest.isolated ? [paperNetworkManifest.isolated] : [])
-          ].map((file) => `data/${file}`);
-          const graph = await loadNetworkFiles(files, '#network-state', 'Paper citation network');
-          paperNetworkLoadedAll = true;
-          applyPaperGraph(graph);
-          setInfo('#network-state', 'Paper Citation Network Loaded', [
-            `Loaded ${paperNodes.length.toLocaleString()} nodes and ${paperLinks.length.toLocaleString()} links.`,
-            'Use filters and pan the canvas to explore the larger graph.'
-          ]);
-        } catch (error) {
-          document.querySelector('#network-state').textContent = `Paper citation network could not load more data. ${error.message || error}`;
-          button.disabled = false;
-          button.textContent = 'Load More Data';
-        }
+        await loadFullPaperNetwork();
       });
       document.querySelector('#zoom-in-author-network').addEventListener('click', () => {
         if (authorNetworkZoom) d3.select('#author-network').transition().duration(250).call(authorNetworkZoom.scaleBy, 1.25);
